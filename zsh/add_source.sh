@@ -14,13 +14,13 @@ source "$ROOT/lib/utils.sh"
 help() {
   echo """
 
-Adds a PATH entry to a shell rc file.
+Adds source file entry to a shell rc file.
 
 Usage:
-    $0 PATH_ENTRY DESCRIPTION
+    $0 SOURCE_FILE DESCRIPTION
 
     Arguments:
-      PATH_ENTRY                   The path entry to add to the shell rc file
+      SOURCE_FILE                  The source file to add to the shell rc file
       DESCRIPTION                  Optional description to add to the shell rc file
 
     Options:
@@ -34,24 +34,24 @@ Usage:
 """
 }
 
-add_path_entry() {
-  local path_entry="$1"
-  local description="$2"
-  if ! grep -q 'PATH=$PATH:'"$path_entry" "$RC_FILE"; then
+add_source_file() {
+  local source_file="$1"
+    local description="$2"
+  if ! grep -q "source $source_file" "$RC_FILE"; then
     if [[ -n "$description" ]]; then
       lib::exec echo '# '"$description" >>"$RC_FILE"
     fi
-    lib::exec echo 'PATH=$PATH:'"$path_entry" >>"$RC_FILE"
-    log::info "Successfully added: $path_entry to $RC_FILE"
+    lib::exec echo "source $source_file" >>"$RC_FILE"
+    log::info "Successfully added: $source_file to $RC_FILE"
     tail "$RC_FILE"
   else
-    log::warn "Path entry $path_entry already exists in $RC_FILE"
+    log::warn "File $source_file already sourced in $RC_FILE"
   fi
 }
 
 main() {
 
-  local path_entry description
+  local source_file description
 
   # Parse user input
   while [[ $# -gt 0 ]]; do
@@ -76,8 +76,8 @@ main() {
       shift 1
       ;;
     *)
-      if [[ -z "$path_entry" ]]; then
-        path_entry="$1"
+      if [[ -z "$source_file" ]]; then
+        source_file="$1"
         shift 1
       elif [[ -z "$description" ]]; then
         description="$1"
@@ -89,13 +89,14 @@ main() {
 
   # Validate
   {
-    if [[ -z "$path_entry" ]]; then
-      log::error "You must specify a path entry"
+    if [[ -z "$source_file" ]]; then
+      log::error "You must specify a source file"
       help >&2
       exit 2
     fi
-    if [[ ! -d "$path_entry" ]]; then
-      log::error "Path entry does not exist on file system: $path_entry"
+    if [[ ! -e "$source_file" ]]; then
+      log::error "File $source_file does not exist"
+      help >&2
       exit 2
     fi
     if [[ -z "$RC_FILE" ]]; then
@@ -104,7 +105,7 @@ main() {
     fi
   }
 
-  add_path_entry "$path_entry" "$description"
+  add_source_file "$source_file" "$description"
 }
 
 main "$@"
