@@ -40,8 +40,10 @@ add_alias() {
     lib::exec echo "alias $alias_name=\"$alias_command\"" >>"$RC_FILE"
     log::info "Successfully added: $alias_name with command: $alias_command"
     tail "$RC_FILE"
+    return 0
   else
     log::warn "alias $alias_name already exists in $RC_FILE"
+    return 1
   fi
 }
 

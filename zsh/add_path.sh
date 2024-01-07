@@ -44,8 +44,10 @@ add_path_entry() {
     lib::exec echo 'PATH=$PATH:'"$path_entry" >>"$RC_FILE"
     log::info "Successfully added: $path_entry to $RC_FILE"
     tail "$RC_FILE"
+    return 0
   else
     log::warn "Path entry $path_entry already exists in $RC_FILE"
+    return 1
   fi
 }
 
