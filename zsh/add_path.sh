@@ -2,14 +2,14 @@
 
 shopt -s globstar # enable globbing
 
-ROOT="${ROOT:-"$(git rev-parse --show-toplevel)"}"
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/../lib/log.sh"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/../lib/utils.sh"
 
 RC_FILE="${RC_FILE:-"$HOME/.zshrc"}"
 
-# shellcheck disable=SC1091
-source "$ROOT/lib/log.sh"
-# shellcheck disable=SC1091
-source "$ROOT/lib/utils.sh"
 
 help() {
   echo """
