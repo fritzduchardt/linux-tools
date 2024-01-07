@@ -43,10 +43,8 @@ add_source_file() {
     lib::exec echo "source $source_file" >>"$RC_FILE"
     log::info "Successfully added: $source_file to $RC_FILE"
     tail "$RC_FILE"
-    return 0
   else
     log::warn "File $source_file already sourced in $RC_FILE"
-    return 1
   fi
 }
 
