@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env zsh
 
 declare -A LOG_LEVELS
 LOG_LEVELS=([trace]=0 [debug]=1 [info]=2 [warn]=3 [error]=4 [fatal]=5)
