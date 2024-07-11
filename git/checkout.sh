@@ -8,14 +8,10 @@ source "$SCRIPT_DIR/../lib/utils.sh"
 
 # list remote and local branches in order to check them out
 function checkout_branches() {
-  local fetch="$1"
-  if [ "$fetch" = "fetch" ]; then
-    lib::exec git fetch
-  fi
+  local branch="$1"
   local branches
   branches="$(lib::exec git branch -a | tr -d ' ')"
-  echo "$branches" | fzf --preview 'git log -n 10 --color=always --oneline --abbrev-commit {}' | sed "s/remotes\/origin\///g" | xargs git checkout
+  echo "$branches" | fzf --query "$branch" --preview 'git log -n 10 --color=always --oneline --abbrev-commit {}' | sed "s/remotes\/origin\///g" | xargs git checkout
 }
 
 checkout_branches "$1"
-
