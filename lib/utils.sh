@@ -11,3 +11,16 @@ lib::exec() {
         log::info "DRY-RUN: $command ${*}"
     fi
 }
+
+lib::prompt() {
+    local msg="${1:-Are your sure?}"
+    log::warn "$msg"
+    select yn in "yes" "no"; do
+        if [[ "$yn" == "no" ]]; then
+            log::info "Aborting - good bye."
+            exit 0
+        else
+            break
+        fi
+    done
+}
