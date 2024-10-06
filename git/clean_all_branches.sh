@@ -1,13 +1,10 @@
 #!/usr/bin/env bash
 
-SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
-# shellcheck disable=SC1091
-source "$SCRIPT_DIR/../lib/log.sh"
-# shellcheck disable=SC1091
-source "$SCRIPT_DIR/../lib/utils.sh"
+source "../lib/log.sh"
+source "../lib/utils.sh"
 
-main="${1:-master}"
-delete_remote="${2}"
+delete_remote="${1}"
+main="$(find_main_branch)"
 lib::exec git checkout "$main"
 while read -r branch; do
   lib::prompt "Delete $branch"
