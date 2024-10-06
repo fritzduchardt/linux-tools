@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 set -eo pipefail
 
-source "../lib/log.sh"
-source "../lib/utils.sh"
-source "./git_lib.sh"
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
+source "$SCRIPT_DIR/../lib/log.sh"
+source "$SCRIPT_DIR/../lib/utils.sh"
+source "$SCRIPT_DIR/git_lib.sh"
 
 new_branch="${1:?Provide new branch name}"
 main="$(find_main_branch)"
