@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
+set -eo pipefail
 
 source "../lib/log.sh"
 source "../lib/utils.sh"
+source "./git_lib.sh"
 
 delete_remote="${1}"
 main="$(find_main_branch)"
 lib::exec git checkout "$main"
 while read -r branch; do
   lib::prompt "Delete $branch"
-  if [[ -n $delete_remote ]]; then
+  if [[ "$delete_remote" == "force" ]]; then
     lib::exec git checkout "$branch" &>/dev/null
     if lib::exec git push origin --delete "$branch" &>/dev/null; then
       log::info "Deleted on remote as well"

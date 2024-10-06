@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# shellcheck disable=SC2181
 
 KUBECTL_BIN="${KUBECTL_BIN:-kubectl}"
 
@@ -23,8 +22,7 @@ function fzf::select_from_config() {
   local header="${2}"
   local query="${3}"
   local entry
-  entry="$(lib::exec fzf --print-query --header "$header" --query "$query" <"$config_file")"
-  if [[ $? -ne 0 ]]; then
+  if ! entry="$(lib::exec fzf --print-query --header "$header" --query "$query" <"$config_file")"; then
     log::debug "No entry found in: $config_file. Going with user input: $entry"
   fi
   lib::exec echo "$entry" | tr -d '\n'

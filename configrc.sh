@@ -1,15 +1,19 @@
 #!/usr/bin/env bash
 
-scripts_dir="$(dirname "$0")"
+script_dir="$(dirname "$0")"
+
+lib::exec_function() {
+  local dir="$1" script="$2"
+  shift 2
+  (cd "$dir" && ./"$script" "$@")
+}
 
 # git
-alias {cleanbranches,cb}="(cd $scripts_dir/git && ./clean_branches.sh)"
-clean_all_branches() { (cd "$scripts_dir"/git && ./clean_all_branches.sh "$@") }
-alias cab="clean_all_branches"
-alias {checkout,co}="( cd $scripts_dir/git && ./checkout.sh)"
-switch_branch() { (cd "$scripts_dir"/git && ./switch_branch.sh "$@") }
-alias sb="switch_branch"
+alias {cleanbranches,cb}="lib::exec_function $script_dir/git clean_branches.sh"
+alias {cleanallbranches,cab}="lib::exec_function $script_dir/git clean_all_branches.sh"
+alias {checkout,co}="lib::exec_function $script_dir/git checkout.sh"
+alias {switch,sb}="lib::exec_function $script_dir/git switch_branch.sh"
 
 # misc
-calc() { (cd "$scripts_dir"/misc && ./calc.sh "$@") }
-tax() { (cd "$scripts_dir"/misc && ./tax.sh calc "$@") }
+alias calc="lib::exec_function $script_dir/misc calc.sh"
+alias tax="lib::exec_function $script_dir/misc tax.sh calc"

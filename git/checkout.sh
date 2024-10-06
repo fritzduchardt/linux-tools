@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -eo pipefail
 
 source "../lib/log.sh"
 source "../lib/utils.sh"
