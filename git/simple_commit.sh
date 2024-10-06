@@ -16,7 +16,7 @@ mr="$(echo -e "no\nyes" | fzf --header "MR")"
 force="$(echo -e "no\nyes" | fzf --header "force")"
 
 lib::exec git add .
-lib::exec git commit -am "$prefix: $msg"
+lib::exec git commit -m "$prefix: $msg"
 cmd=(git push origin HEAD)
 if [[ "$mr" == "yes" ]]; then
   cmd+=(-o merge_request.create)
