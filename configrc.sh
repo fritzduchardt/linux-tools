@@ -13,7 +13,7 @@ alias {cleanbranches,cb}="lib::exec_linux_tool $script_dir/git clean_branches.sh
 alias {cleanallbranches,cab}="lib::exec_linux_tool $script_dir/git clean_all_branches.sh"
 alias {checkout,co}="lib::exec_linux_tool $script_dir/git checkout.sh"
 alias sb="lib::exec_linux_tool $script_dir/git switch_branch.sh"
-alias {simplecommit,sc}="lib::exec_linux_tool $script_dir/git simple_commit.sh"
+alias {simplecommit,scm}="lib::exec_linux_tool $script_dir/git simple_commit.sh"
 
 # misc
 alias calc="lib::exec_linux_tool $script_dir/misc calc.sh"

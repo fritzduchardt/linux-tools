@@ -11,11 +11,11 @@ if [[ -z "$msg" ]]; then
   log::error "Please provide commit message"
   exit 1
 fi
-prefix="$(echo -e "fix\nfeat\ndocs" | fzf)"
+prefix="$(echo -e "fix\nfeat\ndocs\nchore" | fzf)"
 mr="$(echo -e "no\nyes" | fzf --header "MR")"
 force="$(echo -e "no\nyes" | fzf --header "force")"
 
-lib::exec git add .
+lib::exec git add --all
 lib::exec git commit -m "$prefix: $msg"
 cmd=(git push origin HEAD)
 if [[ "$mr" == "yes" ]]; then
