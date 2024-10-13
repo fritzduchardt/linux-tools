@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
-source "../lib/log.sh"
-source "../lib/utils.sh"
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
+source "$SCRIPT_DIR/../lib/log.sh"
+source "$SCRIPT_DIR/../lib/utils.sh"
 
 ops="$*"
 cmd="${ops[*]}"
