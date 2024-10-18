@@ -15,13 +15,18 @@ prefix="$(echo -e "fix\nfeat\ndocs\nchore" | fzf)"
 mr="$(echo -e "no\nyes" | fzf --header "MR")"
 force="$(echo -e "no\nyes" | fzf --header "force")"
 
-lib::exec git add --all
-lib::exec git commit -m "$prefix: $msg"
 cmd=(git push origin HEAD)
 if [[ "$mr" == "yes" ]]; then
+  main_branch="$(find_main_branch)"
+  if [[ "$(find_current_branch)" == "$main_branch" ]]; then
+    log::error "You are on $main_branch"
+    exit 2
+  fi
   cmd+=(-o merge_request.create)
 fi
 if [[ "$force" == "yes" ]]; then
   cmd+=(-f)
 fi
-lib::exec "${cmd[@]}"
+lib::exec git add --all
+lib::exec git commit -m "$prefix: $msg"
+# lib::exec "${cmd[@]}"
