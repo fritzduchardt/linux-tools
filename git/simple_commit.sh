@@ -29,4 +29,4 @@ if [[ "$force" == "yes" ]]; then
 fi
 lib::exec git add --all
 lib::exec git commit -m "$prefix: $msg"
-# lib::exec "${cmd[@]}"
+lib::exec "${cmd[@]}"
