@@ -6,18 +6,14 @@ source "$SCRIPT_DIR/../lib/log.sh"
 source "$SCRIPT_DIR/../lib/utils.sh"
 source "$SCRIPT_DIR/git_lib.sh"
 
-new_branch="${1:?Provide new branch name}"
 main="$(find_main_branch)"
 current="$(find_current_branch)"
 
-lib::exec git stash --all
-if [[ "$current" != "$main" ]]; then
-  lib::exec git switch "$main"
+if [[ "$current" == "$main" ]]; then
   lib::exec git pull
 fi
-if [[ -z "$(lib::exec git branch --list "$new_branch")" ]]; then
-  lib::exec git switch -c "$new_branch"
-else
-  lib::exec git switch "$new_branch"
-fi
+
+lib::exec git stash push --include-untracked
+lib::exec git fetch
+lib::exec git rebase "origin/$main"
 lib::exec git stash pop
