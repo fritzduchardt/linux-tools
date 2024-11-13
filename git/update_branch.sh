@@ -13,7 +13,16 @@ if [[ "$current" == "$main" ]]; then
   lib::exec git pull
 fi
 
-lib::exec git stash push --include-untracked
+local_changes=""
+if [[ -n "$(git status --porcelain)" ]]; then
+  log::info "Stashing local changes"
+  lib::exec git stash push --include-untracked
+  local_changes="true"
+fi
 lib::exec git fetch
+log::info "Rebase with origin/$main"
 lib::exec git rebase "origin/$main"
-lib::exec git stash pop
+if [[ -n "$local_changes" ]]; then
+  log::info "Restoring local changes"
+  lib::exec git stash pop
+fi
