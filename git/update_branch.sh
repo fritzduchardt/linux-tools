@@ -9,19 +9,19 @@ source "$SCRIPT_DIR/git_lib.sh"
 main="$(find_main_branch)"
 current="$(find_current_branch)"
 
-if [[ "$current" == "$main" ]]; then
-  lib::exec git pull
-fi
-
 local_changes=""
 if [[ -n "$(git status --porcelain)" ]]; then
   log::info "Stashing local changes"
   lib::exec git stash push --include-untracked
   local_changes="true"
 fi
-lib::exec git fetch
-log::info "Rebase with origin/$main"
-lib::exec git rebase "origin/$main"
+if [[ "$current" == "$main" ]]; then
+  lib::exec git pull
+else
+  lib::exec git fetch
+  log::info "Rebase with origin/$main"
+  lib::exec git rebase "origin/$main"
+fi
 if [[ -n "$local_changes" ]]; then
   log::info "Restoring local changes"
   lib::exec git stash pop
