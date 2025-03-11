@@ -20,8 +20,9 @@ alias {git-deletebranch,db}="lib::exec_linux_tool $script_dir/git delete_branch.
 # fabric
 alias {fbrc,ai}="lib::exec_linux_tool $script_dir/fabric fabric.sh"
 alias {fbrcq,aiq}="lib::exec_linux_tool $script_dir/fabric fabric.sh -p devops_question"
-alias {fbrccmd,aicmd}="lib::exec_linux_tool $script_dir/fabric fabric.sh -p devops_cmd"
+alias {fbrccmd,aicmd}="lib::exec_linux_tool $script_dir/fabric fabric.sh -c -p devops_cmd"
 alias {fbrcs,ais}="lib::exec_linux_tool $script_dir/fabric fabric.sh -p devops_script"
+alias {fbrca,aia}="lib::exec_linux_tool $script_dir/fabric fabric.sh -p devops_amend"
 alias {fbrcc,aic}="lib::exec_linux_tool $script_dir/fabric fabric_chat.sh"
 alias {fbrcb,aib}="lib::exec_linux_tool $script_dir/fabric fabric_build.sh"
 

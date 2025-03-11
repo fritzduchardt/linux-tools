@@ -14,11 +14,12 @@ function show_help() {
   echo "  -i INPUTFILE     Specify an input file."
   echo "  -o               Overwrite the input file with output."
   echo "  -s SESSION       Specify a session."
+  echo "  -c               Toggle copy to clipboard (default is enabled)."
   echo "  -h               Show this help message."
 }
 
 function fbrc() {
-  local pattern session prompt inputfile overwrite input output
+  local pattern session prompt inputfile overwrite input output copy_to_clipboard
 
   while [[ "$#" -gt 0 ]]; do
     case "$1" in
@@ -37,6 +38,10 @@ function fbrc() {
       -s)
         session="$2"
         shift 2
+        ;;
+      -c)
+        copy_to_clipboard=true
+        shift
         ;;
       -p)
         pattern="$2"
@@ -67,10 +72,18 @@ function fbrc() {
     input="$(cat "$inputfile")"
     [[ -n "$prompt" ]] && input="$prompt: $input"
     output="$("${fabric_cmd[@]}" <<<"$input" | "${OUTPUT_FILTER[@]}")"
-    echo "$output" | "${XCLIP_COPY[@]}" && "${XCLIP_PASTE[@]}"; echo
+    if [[ "$copy_to_clipboard" == "true" ]]; then
+      echo "$output" | "${XCLIP_COPY[@]}" && "${XCLIP_PASTE[@]}"; echo
+    else
+      echo "$output"
+    fi
   else
     output="$("${fabric_cmd[@]}" <<<"$prompt" | "${OUTPUT_FILTER[@]}")"
-    echo "$output" | "${XCLIP_COPY[@]}" && "${XCLIP_PASTE[@]}"; echo
+    if [[ "$copy_to_clipboard" == "true" ]]; then
+      echo "$output" | "${XCLIP_COPY[@]}" && "${XCLIP_PASTE[@]}"; echo
+    else
+      echo "$output"
+    fi
   fi
 
   echo ": $(date +%s);0;${fabric_cmd[*]}" >> ~/.zsh_history
