@@ -18,8 +18,9 @@ alias {git-updatebranch,ub}="lib::exec_linux_tool $script_dir/git update_branch.
 alias {git-deletebranch,db}="lib::exec_linux_tool $script_dir/git delete_branch.sh"
 
 # fabric
-alias "fbrc"="lib::exec_linux_tool $script_dir/fabric fabric.sh"
-alias "fbrcs"="lib::exec_linux_tool $script_dir/fabric fabric_script.sh"
+alias {fbrc,ai}="lib::exec_linux_tool $script_dir/fabric fabric.sh"
+alias {fbrcc,aic}="lib::exec_linux_tool $script_dir/fabric fabric_chat.sh"
+alias {fbrcs,ais}="lib::exec_linux_tool $script_dir/fabric fabric_script.sh"
 
 # misc
 alias calc="lib::exec_linux_tool $script_dir/misc calc.sh"
