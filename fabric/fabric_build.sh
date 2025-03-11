@@ -9,7 +9,7 @@ source "$SCRIPT_DIR/../lib/utils.sh"
 FBRC_BIN="$SCRIPT_DIR/fabric.sh"
 
 # fbrcs
-function fbrc_script() {
+function fbrc_build() {
   local line dir file desc path session
   session="$(date +%Y%m%d%H%M%S)"
   trap "fabric --wipesession=$session" EXIT
@@ -28,4 +28,4 @@ function fbrc_script() {
   done
 }
 
-fbrc_script "$@"
+fbrc_build "$@"
