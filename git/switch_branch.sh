@@ -13,9 +13,9 @@ current="$(find_current_branch)"
 lib::exec git stash --all
 if [[ "$current" != "$main" ]]; then
   lib::exec git switch "$main"
-  lib::exec git pull
+  lib::exec git pull --ff-only
 fi
-if [[ -z "$(lib::exec git branch --list "$new_branch")" ]]; then
+if ! git branch --list "$new_branch" >/dev/null; then
   lib::exec git switch -c "$new_branch"
 else
   lib::exec git switch "$new_branch"
