@@ -23,9 +23,14 @@ alias {fbrcq,aiq}="lib::exec_linux_tool $script_dir/fabric fabric.sh -p devops_q
 alias {fbrccmd,aicmd}="lib::exec_linux_tool $script_dir/fabric fabric.sh -c -p devops_cmd"
 alias {fbrcs,ais}="lib::exec_linux_tool $script_dir/fabric fabric.sh -p devops_script"
 alias {fbrca,aia}="lib::exec_linux_tool $script_dir/fabric fabric.sh -p devops_amend"
-alias {fbrci,aii}="lib::exec_linux_tool $script_dir/fabric fabric.sh -p devops_improve"
 alias {fbrcc,aic}="lib::exec_linux_tool $script_dir/fabric fabric_chat.sh"
 alias {fbrcb,aib}="lib::exec_linux_tool $script_dir/fabric fabric_build.sh"
+alias {fbrci,aii}="lib::exec_linux_tool $script_dir/fabric fabric_improve.sh"
+function find_for_fabric() {
+  local dir="${1:-.}"
+  find "$dir" -type f -not -path '*/.*' | grep -v ".*.txt$"
+}
+alias fff="find_for_fabric"
 
 # misc
 alias calc="lib::exec_linux_tool $script_dir/misc calc.sh"
