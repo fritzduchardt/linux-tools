@@ -35,3 +35,4 @@ alias fff="find_for_fabric"
 # misc
 alias calc="lib::exec_linux_tool $script_dir/misc calc.sh"
 alias tax="lib::exec_linux_tool $script_dir/misc tax.sh calc"
+alias help="lib::exec_linux_tool $script_dir/misc help.sh"
