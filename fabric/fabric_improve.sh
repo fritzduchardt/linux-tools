@@ -10,7 +10,7 @@ FBRC_BIN="$SCRIPT_DIR/fabric.sh"
 
 # fbrcs
 function fbrc_improve() {
-  local file session line
+  local file session line continue_arg
   while [[ "$#" -gt 0 ]]; do
     case "$1" in
       -i)
@@ -21,7 +21,13 @@ function fbrc_improve() {
         session="$2"
         shift 2
         ;;
+      -c | --continue)
+        continue_arg="-c"
+        shift 1
+        ;;
       *)
+        log::error "Invalid option: $1"
+        shift 1
         break
         ;;
     esac
@@ -30,11 +36,11 @@ function fbrc_improve() {
   if [[ -z  "$file" ]]; then
     while IFS= read -r line; do
       log::info "Improving $line"
-      lib::exec "$FBRC_BIN" -p devops_improve -i "$line" -o -s "$session"
+      lib::exec "$FBRC_BIN" -p devops_improve -i "$line" -o -s "$session" $continue_arg
     done
   else
       log::info "Improving $file"
-      lib::exec "$FBRC_BIN" -p devops_improve -i "$file" -o -s "$session"
+      lib::exec "$FBRC_BIN" -p devops_improve -i "$file" -o -s "$session" $continue_arg
   fi
 }
 

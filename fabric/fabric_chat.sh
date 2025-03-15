@@ -8,14 +8,14 @@ source "$SCRIPT_DIR/fabric_lib.sh"
 function fbrc_chat() {
   local last_cmd prompt output
 
-  last_cmd="$(grep -o -E "fabric --pattern \w+ .*" ~/.zsh_history | tac | head -n1)"
+  last_cmd="$(last_fabric)"
   if [[ "$#" == "0" ]]; then
     read -r -p "Prompt: " prompt
-    prompt="The topic is $session. $prompt"
   else
     prompt="$*"
   fi
-  output="$($last_cmd <<<"$prompt" | "${OUTPUT_FILTER[@]}")"
+  # shellcheck disable=SC2086
+  output="$(lib::exec $last_cmd <<<"$prompt" | "${OUTPUT_FILTER[@]}")"
 
   echo "$output" | "${XCLIP_COPY[@]}" && "${XCLIP_PASTE[@]}"; echo
 }
