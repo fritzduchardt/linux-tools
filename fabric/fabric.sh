@@ -61,9 +61,11 @@ function fbrc() {
     log::debug "Prompt: $prompt"
   fi
 
-  local -a fabric_cmd=(fabric --pattern "$pattern")
+  local -a fabric_cmd=(fabric --stream --pattern "$pattern")
   [[ -n "$session" ]] && fabric_cmd+=(--session "$session")
   [[ -z "$prompt" ]] && prompt="$*"
+
+  echo ": $(date +%s);0;${fabric_cmd[*]} #added by fabric.sh" >> ~/.zsh_history
 
   if [[ "$overwrite" == "true" && -n "$inputfile" ]]; then
     output="$("${fabric_cmd[@]}" < "$inputfile" | "${OUTPUT_FILTER[@]}")"
@@ -78,15 +80,14 @@ function fbrc() {
       echo "$output"
     fi
   else
-    output="$("${fabric_cmd[@]}" <<<"$prompt" | "${OUTPUT_FILTER[@]}")"
     if [[ "$copy_to_clipboard" == "true" ]]; then
+      output="$("${fabric_cmd[@]}" <<<"$prompt" | "${OUTPUT_FILTER[@]}")"
       echo "$output" | "${XCLIP_COPY[@]}" && "${XCLIP_PASTE[@]}"; echo
     else
-      echo "$output"
+      "${fabric_cmd[@]}" <<<"$prompt" | "${OUTPUT_FILTER[@]}"
     fi
   fi
 
-  echo ": $(date +%s);0;${fabric_cmd[*]}" >> ~/.zsh_history
 }
 
 fbrc "$@"
