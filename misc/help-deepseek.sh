@@ -10,14 +10,17 @@ help() {
     exit 2
   fi
 
-  if man "$1" >/dev/null 2>&1; then
-    help="$(man "$1" | col -b | tac)"
-  elif ! help="$("$@" --help | tac)"; then
+  if ! help="$("$@" --help | tac)"; then
     exit 2
   fi
 
   selection="$(fzf -e <<<"$help")"
   echo "$help" | grep -A3 "$selection"
 }
+
+if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+  echo "Usage: $0 <command>"
+  exit 0
+fi
 
 help "$@"
