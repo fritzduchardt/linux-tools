@@ -73,19 +73,24 @@ function fbrc() {
       lib::exec "$FBRC_BIN" --wipesession "$session"
     fi
   fi
-  if [[ "$#" == 0 ]]; then
-    read -r -p "Prompt: " prompt
-    prompt="The topic is $session. $prompt"
-    log::debug "Prompt: $prompt"
+
+  ## Construct the prompt
+  # Add general topic
+  prompt="The topic is $session\n"
+  # Add args to prompt
+  if [[ $# -gt 0 ]]; then
+    prompt="$prompt$*"
+  else
+    local prompt_tmp
+    read -r -p "Prompt: " prompt_tmp
+    prompt="$prompt$prompt_tmp"
   fi
 
   local -a fabric_cmd=(fabric --stream --pattern "$pattern")
   [[ -n "$session" ]] && fabric_cmd+=(--session "$session")
-  [[ -z "$prompt" ]] && prompt="$*"
 
   echo "${fabric_cmd[*]}" >> ~/.bash_history
 
-  # handle input file
   if [[ -n "$inputfile" ]]; then
     input="$(cat "$inputfile")"
     [[ -n "$prompt" ]] && input="$prompt: $input"
@@ -95,7 +100,6 @@ function fbrc() {
     else
       echo "$output"
     fi
-  # handle prompt
   else
     if [[ "$copy_to_clipboard" == "true" ]]; then
       output="$(lib::exec "${fabric_cmd[@]}" <<<"$prompt" | "${OUTPUT_FILTER[@]}")"
@@ -104,7 +108,6 @@ function fbrc() {
       lib::exec "${fabric_cmd[@]}" <<<"$prompt" | "${OUTPUT_FILTER[@]}"
     fi
   fi
-
 }
 
 fbrc "$@"
