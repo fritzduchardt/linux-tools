@@ -3,11 +3,16 @@
 SCRIPT_DIR="$(dirname -- "$0")"
 source "$SCRIPT_DIR/../lib/log.sh"
 
+usage() {
+  log::info "Usage: $0 <command>"
+  exit 1
+}
+
 help() {
   local help selection
+
   if [[ $# -eq 0 ]]; then
-    log::error "Command is missing"
-    exit 2
+    usage
   fi
 
   if man "$1" >/dev/null 2>&1; then
