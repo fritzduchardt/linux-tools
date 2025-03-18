@@ -29,13 +29,27 @@ alias {aic,ai-chat}="lib::exec_linux_tool $script_dir/fabric fabric_chat.sh"
 alias {aib,ai-build}="lib::exec_linux_tool $script_dir/fabric fabric_build.sh"
 alias {aistdin,ai-stdin}="lib::exec_linux_tool $script_dir/fabric fabric_stdin.sh"
 alias {aigit,ai-git}="lib::exec_linux_tool $script_dir/fabric fabric_stdin.sh -p devops_gitcommit -x"
+alias {aidoc,ai-doc}="lib::exec_linux_tool $script_dir/fabric fabric_stdin.sh -p devops_document -x"
 alias {aii,ai-improve}="lib::exec_linux_tool $script_dir/fabric fabric_improve.sh"
 alias {aiic,ai-improve-continue}="lib::exec_linux_tool $script_dir/fabric fabric_improve.sh -c"
+function concat_for_fabric() {
+  local file
+  for file in "$1"/*; do
+    if [[ -d "$file" ]]; then
+      echo -e "\n=== $file ===\n";
+      echo "Directory"
+    else
+      echo -e "\n=== $file ===\n";
+      cat "$file";
+      fi
+  done
+}
 function find_for_fabric() {
   local dir="${1:-.}"
   find "$dir" -type f -not -path '*/.*' | grep -v ".*.txt$"
 }
 alias fff="find_for_fabric"
+alias cff="concat_for_fabric"
 alias {model-ollama,mo}="export DEFAULT_MODEL=qwen2.5-coder:14b DEFAULT_VENDOR=Ollama"
 alias {model-claude,mc}="export DEFAULT_MODEL=claude-3-5-sonnet-latest DEFAULT_VENDOR=Anthropic"
 alias {model-chatgpt,mg}="export DEFAULT_MODEL=gpt-4o-2024-11-20 DEFAULT_VENDOR=OpenAI"
