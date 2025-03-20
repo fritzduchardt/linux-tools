@@ -48,8 +48,13 @@ function find_for_fabric() {
   local dir="${1:-.}"
   find "$dir" -type f -not -path '*/.*' | grep -v ".*.txt$"
 }
+function internet_for_fabric() {
+  local url="$1"
+  curl -s "$url" | lynx -dump -stdin
+}
 alias fff="find_for_fabric"
 alias cff="concat_for_fabric"
+alias iff="internet_for_fabric"
 alias {model-ollama,mo}="export DEFAULT_MODEL=qwen2.5-coder:14b DEFAULT_VENDOR=Ollama"
 alias {model-claude,mc}="export DEFAULT_MODEL=claude-3-5-sonnet-latest DEFAULT_VENDOR=Anthropic"
 alias {model-chatgpt,mg}="export DEFAULT_MODEL=gpt-4o-2024-11-20 DEFAULT_VENDOR=OpenAI"
