@@ -11,9 +11,10 @@ main() {
   local mr force push msg ai msg_proposal prefix_choices prefix cmd main_branch current_branch OPTIND
 
   # Parse command line arguments using getopts
-  while getopts "mfp" opt; do
+  while getopts "mMfp" opt; do
     case $opt in
       m) mr="yes" ;;
+      M) mr="no" ;;
       f) force="yes" ;;
       p) push="yes" ;;
       *) exit 1 ;;
