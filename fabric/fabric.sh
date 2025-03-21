@@ -62,7 +62,7 @@ function fbrc() {
   done
 
   if [[ -z "$pattern" ]]; then
-    pattern="$(ls "$FABRIC_HOME" | fzf --query=devops_question)"
+    pattern="$(ls "$FABRIC_HOME" | fzf --query=devops_)"
   fi
   if [[ -n "$continue" ]]; then
     session="$(last_session)"
