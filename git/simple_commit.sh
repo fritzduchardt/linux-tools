@@ -33,7 +33,7 @@ main() {
   if [[ -z "$msg" ]]; then
     log::info "Figuring out your commit message.."
     msg_proposal=$(mktemp)
-    trap "rm $msg_proposal" EXIT
+    trap "rm -f $msg_proposal" EXIT
     git diff --staged | "$SCRIPT_DIR/../fabric/fabric_stdin.sh" -p devops_gitcommit > "$msg_proposal"
     vim "$msg_proposal"
     msg=$(cat "$msg_proposal")
