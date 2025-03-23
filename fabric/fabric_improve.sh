@@ -1,46 +1,48 @@
 #!/usr/bin/env bash
 
 set -eo pipefail
-
 SCRIPT_DIR="$(dirname -- "$0")"
 source "$SCRIPT_DIR/../lib/log.sh"
 source "$SCRIPT_DIR/../lib/utils.sh"
+source "$SCRIPT_DIR/fabric_lib.sh"
 
 FBRC_BIN="$SCRIPT_DIR/fabric.sh"
 
 # fbrcs
 function fbrc_improve() {
-  local file session line continue_arg
+  local file line
+  local -a args
   while [[ "$#" -gt 0 ]]; do
     case "$1" in
       -i)
         file="$2"
         shift 2
         ;;
-      -s)
-        session="$2"
-        shift 2
-        ;;
-      -c | --continue)
-        continue_arg="-c"
-        shift 1
-        ;;
       *)
-        log::error "Invalid option: $1"
+        args+=("$1")
         shift 1
-        break
         ;;
     esac
   done
 
-  if [[ -z  "$file" ]]; then
+  if [[ -z "$file" ]]; then
+    local -a pids
     while IFS= read -r line; do
       log::info "Improving $line"
-      lib::exec "$FBRC_BIN" -p devops_improve -i "$line" -o -s "$session" $continue_arg
+      {
+        local -r session="$(create_session)"
+        log::debug "Session: $session"
+        lib::exec "$FBRC_BIN" -p devops_improve -i "$line" -o -s "$session" "${args[@]}"
+        lib::exec fabric --wipesession="$session"
+      } &
+      pids+=($!)
     done
+    log::info "Waiting for fabric to finish"
+    wait "${pids[@]}"
+    log::info "Done!"
   else
       log::info "Improving $file"
-      lib::exec "$FBRC_BIN" -p devops_improve -i "$file" -o -s "$session" $continue_arg
+      lib::exec "$FBRC_BIN" -p devops_improve -i "$file" -o "${args[@]}"
   fi
 }
 

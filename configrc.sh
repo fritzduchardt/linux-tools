@@ -31,7 +31,7 @@ alias {aib,ai-build}="lib::exec_linux_tool $script_dir/fabric fabric_build.sh"
 alias {aiio,ai-stdin}="lib::exec_linux_tool $script_dir/fabric fabric_stdin.sh"
 alias {aigit,ai-git}="lib::exec_linux_tool $script_dir/fabric fabric_stdin.sh -p devops_gitcommit -x"
 alias {aidoc,ai-doc}="lib::exec_linux_tool $script_dir/fabric fabric_stdin.sh -p devops_document -x"
-alias {aii,ai-improve}="lib::exec_linux_tool $script_dir/fabric fabric_improve.sh"
+alias {aii,ai-improve}="lib::exec_linux_tool $script_dir/fabric fabric_improve.sh ''"
 alias {aiic,ai-improve-continue}="lib::exec_linux_tool $script_dir/fabric fabric_improve.sh -c"
 function concat_for_fabric() {
   local file
@@ -47,7 +47,7 @@ function concat_for_fabric() {
 }
 function find_for_fabric() {
   local dir="${1:-.}"
-  find "$dir" -type f -not -path '*/.*' | grep -v ".*.txt$"
+  find "$dir" -type f -not -path '*/.*' | grep -v ".*.txt$" | grep -v ".*.md"
 }
 function internet_for_fabric() {
   local url="$1"
