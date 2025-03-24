@@ -24,6 +24,12 @@ main() {
 
   msg="$*"
 
+  # Check for changes
+  if [[ -z "$(git status --porcelain)" ]]; then
+    log::info "Nothing to comit"
+    exit 1
+  fi
+
   # Stage all files if nothing is staged
   if [[ -z "$(git diff --staged)" ]]; then
     lib::exec git add .
@@ -54,11 +60,14 @@ main() {
     mr="$(echo -e "no\nyes" | fzf --header "MR")"
   fi
 
+  log::info "Committing.."
   lib::exec git commit -m "$msg"
 
   if [[ "$push" == "yes" ]]; then
+    log::info "Pushing.."
     cmd=(git push origin HEAD)
     if [[ "$mr" == "yes" ]]; then
+      log::info "..with MR.."
       main_branch="$(find_main_branch)"
       current_branch="$(find_current_branch)"
       if [[ "$current_branch" == "$main_branch" ]]; then
@@ -72,6 +81,7 @@ main() {
     fi
     lib::exec "${cmd[@]}"
   fi
+  log::info "Done!"
 }
 
 main "$@"
