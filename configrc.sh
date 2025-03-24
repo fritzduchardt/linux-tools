@@ -19,8 +19,8 @@ alias {git-updatebranch,ub}="lib::exec_linux_tool $script_dir/git update_branch.
 alias {git-deletebranch,db}="lib::exec_linux_tool $script_dir/git delete_branch.sh"
 
 # fabric
-alias "ai-setup"="fabric --setup"
-alias {ai}="lib::exec_linux_tool $script_dir/fabric fabric.sh"
+alias ai-setup="fabric --setup"
+alias ai="lib::exec_linux_tool $script_dir/fabric fabric.sh"
 alias {aiq,ai-question}="lib::exec_linux_tool $script_dir/fabric fabric.sh -p devops_question"
 alias {aicmd,ai-cmd}="lib::exec_linux_tool $script_dir/fabric fabric.sh -x -p devops_cmd"
 alias {ais,ai-script}="lib::exec_linux_tool $script_dir/fabric fabric.sh -p devops_script"
