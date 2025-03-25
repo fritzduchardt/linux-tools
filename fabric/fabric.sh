@@ -62,13 +62,13 @@ function fbrc() {
   done
 
   if [[ -z "$pattern" ]]; then
-    pattern="$(ls "$FABRIC_HOME" | fzf --query=devops_)"
+    pattern="$(ls "$FABRIC_HOME" | fzf --header "PICK A PATTERN" --query=devops_)"
   fi
   if [[ -n "$continue" ]]; then
     session="$(last_session)"
   fi
   if [[ -z "$session" ]]; then
-    if session="$(fabric --listsessions | fzf --print-query -e --bind "f2:execute($FBRC_BIN --wipesession {})")"; then
+    if session="$(fabric --listsessions | fzf --header "PICK A SESSION" --print-query -e --bind "f2:execute($FBRC_BIN --wipesession {})")"; then
       session="$(tail -n1 <<<"$session")"
       lib::exec "$FBRC_BIN" --wipesession "$session"
     fi
