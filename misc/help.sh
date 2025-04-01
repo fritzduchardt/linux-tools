@@ -17,8 +17,8 @@ help() {
     usage
   fi
 
-  if man "$1" >/dev/null 2>&1; then
-    help="$(man "$1" | col -b | tac)"
+  if man "$@" >/dev/null 2>&1; then
+    help="$(man "$@" | col -b | tac)"
   elif ! help="$("$@" --help | tac)"; then
     log::error "Failed to get help output for $*"
     exit 2
