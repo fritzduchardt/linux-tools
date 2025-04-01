@@ -26,7 +26,7 @@ main() {
 
   # Check for changes
   if [[ -z "$(git status --porcelain)" ]]; then
-    log::info "Nothing to comit"
+    log::info "Nothing to commit"
     exit 1
   fi
 
