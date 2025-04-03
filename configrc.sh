@@ -25,6 +25,7 @@ alias {aiq,ai-question}="lib::exec_linux_tool $script_dir/fabric fabric.sh -p de
 alias {aicmd,ai-cmd}="lib::exec_linux_tool $script_dir/fabric fabric.sh -x -p devops_cmd"
 alias {ais,ai-script}="lib::exec_linux_tool $script_dir/fabric fabric.sh -p devops_script"
 alias {aia,ai-amend}="lib::exec_linux_tool $script_dir/fabric fabric.sh -p devops_amend -o "
+alias {aiap,ai-amend-project}="lib::exec_linux_tool $script_dir/fabric fabric_amend_project.sh "
 alias {aiac,ai-amend-continue}="lib::exec_linux_tool $script_dir/fabric fabric.sh -p devops_amend -o -c"
 alias {aic,ai-chat}="lib::exec_linux_tool $script_dir/fabric fabric_chat.sh"
 alias {aib,ai-build}="lib::exec_linux_tool $script_dir/fabric fabric_build.sh"

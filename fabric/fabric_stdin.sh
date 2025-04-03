@@ -16,9 +16,6 @@ function fbrc_stdin() {
         pattern="$2"
         shift 2
         ;;
-      *)
-        break
-        ;;
     esac
     prompt+="$1 "
     shift
