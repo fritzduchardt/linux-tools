@@ -86,7 +86,7 @@ function fbrc() {
     prompt="$prompt$prompt_tmp"
   fi
 
-  local -a fabric_cmd=(fabric --stream --pattern "$pattern")
+  local -a fabric_cmd=(fabric --stream --pattern "$pattern" $EXTRA_AI_OPTS)
   [[ -n "$session" ]] && fabric_cmd+=(--session "$session")
 
   echo "${fabric_cmd[*]}" >> ~/.bash_history
