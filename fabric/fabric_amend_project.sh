@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-set -eo pipefail
+set -euo pipefail
+
 SCRIPT_DIR="$(dirname -- "$0")"
 source "$SCRIPT_DIR/../lib/log.sh"
 source "$SCRIPT_DIR/../lib/utils.sh"
@@ -9,7 +10,6 @@ source "$SCRIPT_DIR/fabric_lib.sh"
 FBRC_BIN="$SCRIPT_DIR/fabric_stdin.sh"
 
 function fbrc_amend_project() {
-
   local line file_name
   while IFS= read -r line; do
     if [[ "$line" == "FILENAME:"* ]]; then
