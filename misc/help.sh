@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
+set -eo pipefail
 
 SCRIPT_DIR="$(dirname -- "$0")"
 source "$SCRIPT_DIR/../lib/log.sh"
+source "$SCRIPT_DIR/../lib/utils.sh"
 
 usage() {
   log::info "Usage: $0 <command>"
@@ -17,19 +18,21 @@ help() {
     usage
   fi
 
+  local type="help"
+  local -r tempfile="$(mktemp)"
   if man "$@" >/dev/null 2>&1; then
-    help="$(man "$@" | col -b | tac)"
-  elif ! help="$("$@" --help | tac)"; then
-    log::error "Failed to get help output for $*"
-    exit 2
+    type="man"
+    lib::exec man "$@" | col -b | tac >"$tempfile"
+  else
+    "$@" --help | tac >"$tempfile"
   fi
 
-  if ! selection="$(fzf -e <<<"$help")"; then
-    log::error "Failed to get selection from fzf"
-    exit 3
-  fi
-
-  grep -A3 "$selection" <<<"$help"
+  lib::exec fzf -e \
+    --prompt "$type > " \
+    --border \
+    --height "80%" \
+    --preview "grep -A 100 {} $tempfile" \
+    <"$tempfile" >/dev/null
 }
 
 help "$@"
