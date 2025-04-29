@@ -2,8 +2,8 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'chore: simplify lib::exec by removing DRY_RUN support'
-      sha: 6b9817e417a93b63ab299a83c6bd01111e8d7afa
+      commitTitle: 'feat(utils): support custom prompt message and fix typo...'
+      sha: 471b97776fbcdb65e846e5b2a96cfe0bf5f12d89
     path: .
   path: lib
 kind: LockConfig
