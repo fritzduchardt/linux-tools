@@ -2,8 +2,8 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'feat(utils): support custom prompt message and fix typo...'
-      sha: 471b97776fbcdb65e846e5b2a96cfe0bf5f12d89
+      commitTitle: 'fix: Update lib::prompt to return instead of exiting...'
+      sha: e9caba83f4a16fea651a8a72ae50813f67001392
     path: .
   path: lib
 kind: LockConfig
