@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
 
-# MINOR: Added readonly for constants
-declare -A LOG_LEVELS
-readonly LOG_LEVELS=([trace]=0 [debug]=1 [info]=2 [warn]=3 [error]=4 [fatal]=5)
+declare -A LOG_LEVELS=(
+  [trace]=0
+  [debug]=1
+  [info]=2
+  [warn]=3
+  [error]=4
+  [fatal]=5
+)
 LOG_LEVEL="${LOG_LEVEL:-info}"
 LOG_CONTEXT=""
 
-# MINOR: Simplified lowercase conversion
 log::_lowercase() {
   local str="$1"
   tr '[:upper:]' '[:lower:]' <<< "$str"

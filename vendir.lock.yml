@@ -2,8 +2,8 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: Add cluster-info script
-      sha: 50ba4786cb8fb793c650f76865af8a08828a87f3
+      commitTitle: 'chore: simplify lib::exec by removing DRY_RUN support'
+      sha: 6b9817e417a93b63ab299a83c6bd01111e8d7afa
     path: .
   path: lib
 kind: LockConfig

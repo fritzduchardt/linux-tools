@@ -4,16 +4,18 @@ KUBECTL_BIN="${KUBECTL_BIN:-kubectl}"
 
 # Execute any binary
 lib::exec() {
-  local command="$1"
-  shift
-  if [[ -z "$DRY_RUN" ]] || [[ "$DRY_RUN" != "true" ]]; then
-    log::trace "$command $*"
-    if ! "$command" "$@"; then
-      log::error "Failed to execute: $command $*"
-      return 1
-    fi
-  else
-    log::info "DRY-RUN: $command $*"
+  log::trace "$*"
+  if ! "$@"; then
+    log::error "Failed to execute: $*"
+    return 1
+  fi
+}
+
+lib::prompt() {
+  local -r msg="$(echo -e "yes\nno" | fzf --ghost "Are your sure?")"
+  if [[ "$msg" != "yes" ]]; then
+    log::info "Aborting - good bye."
+    exit 1
   fi
 }
 
@@ -22,6 +24,7 @@ fzf::select_from_config() {
   local header="$2"
   local query="$3"
   local entry
+
   if ! entry="$(lib::exec fzf --print-query --header "$header" --query "$query" <"$config_file")"; then
     log::debug "No entry found in: $config_file. Going with user input: $entry"
   fi
@@ -58,7 +61,7 @@ k8s::resource_exists() {
   local name="$2"
   local namespace="$3"
   lib::exec "$KUBECTL_BIN" get "$resource" "$name" -n "$namespace" 2>/dev/null
-  return $?
+  return "$?"
 }
 
 k8s::registry_url_from_secret() {

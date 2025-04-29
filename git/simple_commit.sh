@@ -40,7 +40,7 @@ main() {
     log::info "Figuring out your commit message.."
     msg_proposal=$(mktemp)
     trap "rm -f $msg_proposal" EXIT
-    git diff --staged | "$SCRIPT_DIR/../../ai-tools/fabric/fabric_stdin.sh" -s auto -p devops_gitcommit > "$msg_proposal"
+    git diff --staged | "$SCRIPT_DIR/../../ai-tools/fabric/fabric.sh" -p devops_gitcommit > "$msg_proposal"
     vim "$msg_proposal"
     msg=$(cat "$msg_proposal")
     ai=true
