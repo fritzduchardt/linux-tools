@@ -8,15 +8,16 @@ source "$SCRIPT_DIR/../lib/utils.sh"
 source "$SCRIPT_DIR/git_lib.sh"
 
 main() {
-  local mr force push msg ai msg_proposal prefix_choices prefix cmd main_branch current_branch OPTIND
+  local mr force push msg ai msg_proposal prefix_choices prefix cmd main_branch current_branch all opt
 
   # Parse command line arguments using getopts
-  while getopts "mMfp" opt; do
+  while getopts "mMfpa" opt; do
     case $opt in
       m) mr="yes" ;;
       M) mr="no" ;;
       f) force="yes" ;;
       p) push="yes" ;;
+      a) all="yes" ;;
       *) exit 1 ;;
     esac
   done
@@ -31,7 +32,7 @@ main() {
   fi
 
   # Stage all files if nothing is staged
-  if [[ -z "$(git diff --staged)" ]]; then
+  if [[ "$all" == "yes" || -z "$(git diff --staged)" ]]; then
     lib::exec git add .
   fi
 

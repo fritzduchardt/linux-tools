@@ -16,6 +16,7 @@ alias {git-sb,sb}="lib::exec_linux_tool $script_dir/git switch_branch.sh"
 alias {git-simplecommit,scm}="lib::exec_linux_tool $script_dir/git simple_commit.sh -p"
 alias {git-simplecommit-nomr,scM}="lib::exec_linux_tool $script_dir/git simple_commit.sh -M -p"
 alias {git-simplecommit-nopush,scP}="lib::exec_linux_tool $script_dir/git simple_commit.sh -M"
+alias {git-simplecommit-stage-all,scA}="lib::exec_linux_tool $script_dir/git simple_commit.sh -a -p"
 alias {git-updatebranch,ub}="lib::exec_linux_tool $script_dir/git update_branch.sh"
 alias {git-deletebranch,db}="lib::exec_linux_tool $script_dir/git delete_branch.sh"
 
