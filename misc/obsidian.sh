@@ -40,11 +40,11 @@ cmd_archive() {
       duration="$1"
     else
       target_dir="$1"
-      duration="6m"
+      duration="6m"  # Default duration if path is provided
     fi
   else
-    target_dir=${1:-.}
-    duration=${2:-6m}
+    target_dir="${1:-.}"
+    duration="${2:-6m}"
   fi
 
   if [[ ! -d "$target_dir" ]]; then
@@ -53,16 +53,10 @@ cmd_archive() {
   fi
 
   case "$duration" in
-    *d)
-      date_str="${duration%d} days ago"
-      ;;
-    *m)
-      date_str="${duration%m} months ago"
-      ;;
-    *y)
-      date_str="${duration%y} years ago"
-      ;;
-    *)
+    *d) date_str="${duration%d} days ago" ;;
+    *m) date_str="${duration%m} months ago" ;;
+    *y) date_str="${duration%y} years ago" ;;
+    *) 
       log::error "Invalid duration: $duration"
       exit 1
       ;;
@@ -116,7 +110,6 @@ archive_file() {
         echo "$line" >> "$temp_file"
         in_block=0
       fi
-
     elif [[ $in_block -eq 1 ]]; then
       echo "$line" >> "$archive_path"
     else
