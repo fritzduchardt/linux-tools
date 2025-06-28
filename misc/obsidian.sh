@@ -30,10 +30,11 @@ EOF
 
 cmd_archive() {
   local target_dir duration cutoff_ts date_str find_cmd
-
   if [[ $# -gt 2 ]]; then
     usage
-  elif [[ $# -eq 1 ]]; then
+  fi
+
+  if [[ $# -eq 1 ]]; then
     if [[ $1 =~ ^[0-9]+[dmy]$ ]]; then
       target_dir="."
       duration="$1"
@@ -51,11 +52,20 @@ cmd_archive() {
     exit 1
   fi
 
-  case $duration in
-    *d) date_str="${duration%d} days ago";;
-    *m) date_str="${duration%m} months ago";;
-    *y) date_str="${duration%y} years ago";;
-    *) log::error "Invalid duration: $duration"; exit 1;;
+  case "$duration" in
+    *d)
+      date_str="${duration%d} days ago"
+      ;;
+    *m)
+      date_str="${duration%m} months ago"
+      ;;
+    *y)
+      date_str="${duration%y} years ago"
+      ;;
+    *)
+      log::error "Invalid duration: $duration"
+      exit 1
+      ;;
   esac
 
   cutoff_ts=$(lib::exec date --date="$date_str" +%s)
@@ -69,9 +79,7 @@ cmd_archive() {
 
 archive_file() {
   local file cutoff_ts filedir base temp_file in_block modified
-  local header_date header_ts year month day
-  local archive_dir archive_path
-
+  local header_date header_ts year month day archive_dir archive_path
   file="$1"
   cutoff_ts="$2"
   filedir=$(dirname -- "$file")
@@ -99,11 +107,9 @@ archive_file() {
         archive_dir="$filedir/$year.archive"
         lib::exec mkdir -p "$archive_dir"
         archive_path="$archive_dir/$base.md"
-
         if [[ ! -f "$archive_path" ]]; then
           lib::exec touch "$archive_path"
         fi
-
         echo "$line" >> "$archive_path"
         in_block=1
       else
@@ -120,7 +126,6 @@ archive_file() {
 
   if [[ $modified -eq 1 ]]; then
     lib::exec mv "$temp_file" "$file"
-
     if [[ ! -s "$file" ]]; then
       log::info "Removing empty file: $file"
       lib::exec rm "$file"
@@ -134,7 +139,6 @@ main() {
   if [[ $# -lt 1 ]]; then
     usage
   fi
-
   local command
   command="$1"
   shift
