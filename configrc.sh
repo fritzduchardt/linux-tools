@@ -25,3 +25,4 @@ alias {git-deletebranch,db}="lib::exec_linux_tool $script_dir/git delete_branch.
 alias calc="lib::exec_linux_tool $script_dir/misc calc.sh"
 alias tax="lib::exec_linux_tool $script_dir/misc tax.sh calc"
 alias help="lib::exec_linux_tool $script_dir/misc help.sh"
+alias archive="lib::exec_linux_tool $script_dir/misc obsidian.sh archive"
