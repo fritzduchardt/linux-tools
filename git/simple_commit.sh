@@ -7,17 +7,34 @@ source "$SCRIPT_DIR/../lib/log.sh"
 source "$SCRIPT_DIR/../lib/utils.sh"
 source "$SCRIPT_DIR/git_lib.sh"
 
+help() {
+  echo "Usage: $(basename "$0") [options] [commit message]"
+  echo
+  echo "Commit changes with optional AI-generated commit messages"
+  echo
+  echo "Options:"
+  echo "  -m    Create merge request (yes)"
+  echo "  -M    Don't create merge request (no)"
+  echo "  -f    Force push"
+  echo "  -p    Push after commit"
+  echo "  -a    Stage all files before commit"
+  echo "  -h    Display this help message"
+  echo
+  echo "If no commit message is provided, an AI will suggest one."
+}
+
 main() {
   local mr force push msg ai msg_proposal prefix_choices prefix cmd main_branch current_branch all opt
 
   # Parse command line arguments using getopts
-  while getopts "mMfpa" opt; do
+  while getopts "mMfpah" opt; do
     case $opt in
       m) mr="yes" ;;
       M) mr="no" ;;
       f) force="yes" ;;
       p) push="yes" ;;
       a) all="yes" ;;
+      h) help; exit 0 ;;
       *) exit 1 ;;
     esac
   done
@@ -86,3 +103,4 @@ main() {
 }
 
 main "$@"
+
