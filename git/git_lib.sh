@@ -5,7 +5,7 @@ find_main_branch() {
 	fi
 	local ref
 	for ref in refs/{heads,remotes/{origin,upstream}}/{main,trunk,mainline,default,master}; do
-		if lib::exec git show-ref -q --verify "$ref" >/dev/null; then
+		if lib::exec git show-ref -q --verify "$ref" &>/dev/null; then
 			local main_branch="${ref##*/}"
 			log::info "Found main branch: $main_branch"
 			echo "$main_branch"
