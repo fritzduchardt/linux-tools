@@ -20,7 +20,7 @@ function help() {
 
 function checkout_branches() {
   local branch="$1" co_branch branches
-  git fetch
+
   branches="$(lib::exec git branch -a --sort=-committerdate | tr -d ' ')"
   co_branch="$(echo "$branches" | fzf --query "$branch" --preview 'git log -n 10 --color=always --oneline --abbrev-commit {}' | sed "s/remotes\/origin\///g")"
   if [[ -n "$co_branch" ]]; then
