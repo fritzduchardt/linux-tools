@@ -42,6 +42,12 @@ main() {
 
   msg="$*"
 
+  # Remove old lock file
+  if [[ -e .git/index.lock ]]; then
+    lib::exec rm .git/index.lock
+    log::warn "Removed git lock file"
+  fi
+
   # Check for changes
   if [[ -z "$(git status --porcelain)" ]]; then
     log::info "Nothing to commit"
@@ -103,4 +109,3 @@ main() {
 }
 
 main "$@"
-
