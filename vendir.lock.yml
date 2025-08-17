@@ -2,8 +2,8 @@ apiVersion: vendir.k14s.io/v1alpha1
 directories:
 - contents:
   - git:
-      commitTitle: 'fix: Update lib::prompt to return instead of exiting...'
-      sha: e9caba83f4a16fea651a8a72ae50813f67001392
+      commitTitle: 'docs: added readme'
+      sha: 71ebc339828ed820c18cdf303b3576b574719f4d
     path: .
   path: lib
 kind: LockConfig
