@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+
 set -eo pipefail
 
 SCRIPT_DIR="$(dirname -- "$0")"
@@ -6,11 +7,7 @@ source "$SCRIPT_DIR/../lib/log.sh"
 source "$SCRIPT_DIR/../lib/utils.sh"
 
 usage() {
-  local exit_code=0
-  if [[ $# -gt 0 ]]; then
-    exit_code=$1
-  fi
-
+  local exit_code=${1:-0}
   cat <<'USAGE'
 Usage: add-cert-chain.sh [-c CHAIN_FILE] CERT_FILE
 
@@ -23,19 +20,14 @@ Examples:
   add-cert-chain.sh -c /etc/ssl/chain.pem /etc/ssl/certs/server.crt
   add-cert-chain.sh -h
 USAGE
-
   exit "$exit_code"
 }
-
-log::info "Starting add-cert-chain.sh"
 
 append_chain_to_cert() {
   local cert="$1"
   local chain_file="$2"
-  local out
+  local out="${cert%.*}-with-chain.crt"
   local perms
-
-  out="${cert%.*}-with-chain.crt"
 
   if [[ ! -r "$cert" ]]; then
     log::error "Certificate file is not readable: $cert"
@@ -54,7 +46,7 @@ append_chain_to_cert() {
   fi
 
   log::info "Appending chain file $chain_file to $out"
-  if ! lib::exec cat "$chain_file" >> "$out"; then
+  if ! lib::exec cat "$chain_file" >>"$out"; then
     log::error "Failed to append chain to $out"
     return 5
   fi
@@ -68,22 +60,29 @@ append_chain_to_cert() {
   fi
 
   log::info "Successfully wrote certificate with chain to $out"
-  return 0
 }
 
 main() {
-  local chain_file
-  local opt=""
-  chain_file="${chain_file:-./chain}"
+  local chain_file="./chain"
+  local opt
 
   while getopts ":c:h" opt; do
-    if [[ "$opt" == "c" ]]; then
-      chain_file="$OPTARG"
-    elif [[ "$opt" == "h" ]]; then
-      usage 0
-    else
-      usage 2
-    fi
+    case "$opt" in
+      c)
+        chain_file="$OPTARG"
+        ;;
+      h)
+        usage 0
+        ;;
+      :)
+        log::error "Option -$OPTARG requires an argument."
+        usage 2
+        ;;
+      \?)
+        log::error "Invalid option: -$OPTARG"
+        usage 2
+        ;;
+    esac
   done
 
   shift $((OPTIND - 1))
@@ -101,7 +100,7 @@ main() {
   fi
 
   append_chain_to_cert "$cert_file" "$chain_file"
-  return $?
 }
 
+log::info "Starting add-cert-chain.sh"
 main "$@"
