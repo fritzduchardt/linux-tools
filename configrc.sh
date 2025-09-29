@@ -8,6 +8,9 @@ lib::exec_linux_tool() {
   "$dir/$script" "$@"
 }
 
+# cert
+alias "cert-addchain"="lib::exec_linux_tool $script_dir/cert add_chain.sh"
+
 # git
 alias {git-cleanbranches,cb}="lib::exec_linux_tool $script_dir/git clean_branches.sh"
 alias {git-cleanallbranches,cab}="lib::exec_linux_tool $script_dir/git clean_all_branches.sh"
@@ -19,7 +22,6 @@ alias {git-simplecommit-nopush,scP}="lib::exec_linux_tool $script_dir/git simple
 alias {git-simplecommit-stage-all,scA}="lib::exec_linux_tool $script_dir/git simple_commit.sh -a -p -M"
 alias {git-updatebranch,ub}="lib::exec_linux_tool $script_dir/git update_branch.sh"
 alias {git-deletebranch,db}="lib::exec_linux_tool $script_dir/git delete_branch.sh"
-
 
 # misc
 alias calc="lib::exec_linux_tool $script_dir/misc calc.sh"

@@ -47,7 +47,6 @@ append_chain_to_cert() {
 
   log::info "Appending chain file $chain_file to $out"
   # Append the full chain to the copied certificate file.
-  # The redirection appends the stdout of lib::exec cat to the destination file.
   if ! lib::exec cat "$chain_file" >>"$out"; then
     log::error "Failed to append chain to $out"
     return 5
