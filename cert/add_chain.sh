@@ -9,16 +9,16 @@ source "$SCRIPT_DIR/../lib/utils.sh"
 usage() {
   local exit_code=${1:-0}
   cat <<'USAGE'
-Usage: add-cert-chain.sh [-c CHAIN_FILE] CERT_FILE
+Usage: add_chain.sh [-c CHAIN_FILE] CERT_FILE
 
 Adds the certificate chain from a config file called "chain" (or specified via -c)
 to an existing TLS certificate file. The resulting certificate (original cert +
 chain) is written next to the original file and suffixed with -with-chain.crt
 
 Examples:
-  add-cert-chain.sh /etc/ssl/certs/server.crt
-  add-cert-chain.sh -c /etc/ssl/chain.pem /etc/ssl/certs/server.crt
-  add-cert-chain.sh -h
+  add_chain.sh /etc/ssl/certs/server.crt
+  add_chain.sh -c /etc/ssl/chain.pem /etc/ssl/certs/server.crt
+  add_chain.sh -h
 USAGE
   exit "$exit_code"
 }
@@ -46,6 +46,8 @@ append_chain_to_cert() {
   fi
 
   log::info "Appending chain file $chain_file to $out"
+  # Append the full chain to the copied certificate file.
+  # The redirection appends the stdout of lib::exec cat to the destination file.
   if ! lib::exec cat "$chain_file" >>"$out"; then
     log::error "Failed to append chain to $out"
     return 5
@@ -60,10 +62,11 @@ append_chain_to_cert() {
   fi
 
   log::info "Successfully wrote certificate with chain to $out"
+  return 0
 }
 
 main() {
-  local chain_file="./chain"
+  local chain_file="${CHAIN_FILE:-./chain}"
   local opt
 
   while getopts ":c:h" opt; do
@@ -99,8 +102,14 @@ main() {
     return 6
   fi
 
+  log::debug "Using chain file: $chain_file"
+  log::debug "Target certificate: $cert_file"
+
   append_chain_to_cert "$cert_file" "$chain_file"
+  return $?
 }
 
-log::info "Starting add-cert-chain.sh"
+log::info "Starting add_chain.sh"
 main "$@"
+rc=$?
+exit $rc
