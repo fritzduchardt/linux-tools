@@ -54,13 +54,11 @@ append_chain_to_cert() {
   fi
 
   log::info "Appending chain file $chain_file to $out"
-  # Append chain file to the copied cert using tee to avoid relying on shell redirection.
-  if ! lib::exec tee -a "$out" < "$chain_file" > /dev/null; then
+  if ! lib::exec cat "$chain_file" >> "$out"; then
     log::error "Failed to append chain to $out"
     return 5
   fi
 
-  # Preserve original file permissions on the new file.
   if ! perms="$(lib::exec stat -c %a "$cert")"; then
     log::warning "Could not read permissions of $cert, skipping chmod"
   else
@@ -74,7 +72,8 @@ append_chain_to_cert() {
 }
 
 main() {
-  local chain_file opt=""
+  local chain_file
+  local opt=""
   chain_file="${chain_file:-./chain}"
 
   while getopts ":c:h" opt; do
