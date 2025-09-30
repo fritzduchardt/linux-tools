@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -eo pipefail
 
-# Set script directory and source required libraries
 SCRIPT_DIR="$(dirname -- "$0")"
 source "$SCRIPT_DIR/../lib/log.sh"
 source "$SCRIPT_DIR/../lib/utils.sh"
@@ -18,70 +17,91 @@ help() {
   echo "  -f    Force push"
   echo "  -p    Push after commit"
   echo "  -a    Stage all files before commit"
+  echo "  -i    Use AI to suggest commit message (only executed when provided)"
   echo "  -h    Display this help message"
   echo
-  echo "If no commit message is provided, an AI will suggest one."
+  echo "If no commit message is provided and -i is not passed, you will be prompted to enter one."
+  echo
+  echo "Examples:"
+  echo "  $(basename "$0") -a -p -m \"fix: correct typo in README\""
+  echo "  $(basename "$0") -a -p -i    # use AI to propose a commit message"
+}
+
+log::warn_to_warning() {
+  # kept for compatibility if some lib uses log::warn
+  log::warning "$1"
 }
 
 main() {
-  local mr force push msg ai msg_proposal prefix_choices prefix cmd main_branch current_branch all opt
+  local mr="" force="" push="" msg="" ai="" msg_proposal="" prefix_choices="" prefix="" cmd=() main_branch="" current_branch="" all="" opt=""
 
-  # Parse command line arguments using getopts
-  while getopts "mMfpah" opt; do
-    case $opt in
-      m) mr="yes" ;;
-      M) mr="no" ;;
-      f) force="yes" ;;
-      p) push="yes" ;;
-      a) all="yes" ;;
-      h) help; exit 0 ;;
-      *) exit 1 ;;
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -m) mr="yes"; shift ;;
+      -M) mr="no"; shift ;;
+      -f) force="yes"; shift ;;
+      -p) push="yes"; shift ;;
+      -a) all="yes"; shift ;;
+      -i) ai="yes"; shift ;;
+      -h|--help) help; exit 0 ;;
+      --) shift; break ;;
+      -*) log::error "Unknown option $1"; exit 1 ;;
+      *) break ;;
     esac
   done
-  shift $((OPTIND-1))
 
   msg="$*"
 
-  # Remove old lock file
-  if [[ -e .git/index.lock ]]; then
-    lib::exec rm .git/index.lock
-    log::warn "Removed git lock file"
+  if [[ -e ".git/index.lock" ]]; then
+    lib::exec rm -f ".git/index.lock" || true
+    log::warning "Removed git lock file"
   fi
 
-  # Check for changes
-  if [[ -z "$(git status --porcelain)" ]]; then
+  if [[ -z "$(lib::exec git status --porcelain)" ]]; then
     log::info "Nothing to commit"
     exit 1
   fi
 
-  # Stage all files if nothing is staged
-  if [[ "$all" == "yes" || -z "$(git diff --staged)" ]]; then
+  if [[ "$all" == "yes" || -z "$(lib::exec git diff --staged)" ]]; then
     lib::exec git add .
   fi
 
-  # Handle commit message generation
   if [[ -z "$msg" ]]; then
-    log::info "Figuring out your commit message.."
-    msg_proposal=$(mktemp)
-    trap "rm -f $msg_proposal" EXIT
-    git diff --staged | "$SCRIPT_DIR/../../ai-tools/fabric/fabric.sh" -p devops_gitcommit > "$msg_proposal"
-    vim "$msg_proposal"
-    msg=$(cat "$msg_proposal")
-    ai=true
-    if [[ -z "$msg" ]]; then
-      log::error "Please provide commit message"
-      exit 2
+    if [[ "$ai" == "yes" ]]; then
+      log::info "Figuring out your commit message.."
+      msg_proposal="$(lib::exec mktemp)"
+      trap "lib::exec rm -f \"$msg_proposal\"" EXIT
+      # Send staged diff to AI tool to generate a commit message, then allow user to edit it.
+      lib::exec git diff --staged | lib::exec "$SCRIPT_DIR/../../ai-tools/fabric/fabric.sh" -p devops_gitcommit > "$msg_proposal" || true
+      lib::exec vim "$msg_proposal"
+      msg="$(lib::exec cat "$msg_proposal")"
+      if [[ -z "$msg" ]]; then
+        log::error "Please provide commit message"
+        exit 2
+      fi
+    else
+      log::info "Please enter your commit message.."
+      msg_proposal="$(lib::exec mktemp)"
+      trap "lib::exec rm -f \"$msg_proposal\"" EXIT
+      lib::exec vim "$msg_proposal"
+      msg="$(lib::exec cat "$msg_proposal")"
+      if [[ -z "$msg" ]]; then
+        log::error "Please provide commit message"
+        exit 2
+      fi
     fi
   fi
 
-  if [[ -z "$ai" ]]; then
+  if [[ -z "$ai" || "$ai" != "yes" ]]; then
     prefix_choices="fix\nfeat\ndocs\nchore"
-    prefix="$(echo -e "$prefix_choices" | fzf)"
-    msg="$prefix: $msg"
+    prefix="$(echo -e "$prefix_choices" | lib::exec fzf)"
+    if [[ -n "$prefix" ]]; then
+      msg="$prefix: $msg"
+    fi
   fi
 
   if [[ -z "$mr" ]]; then
-    mr="$(echo -e "no\nyes" | fzf --header "MR")"
+    mr="$(echo -e "no\nyes" | lib::exec fzf --header "MR")"
   fi
 
   log::info "Committing.."
@@ -105,6 +125,7 @@ main() {
     fi
     lib::exec "${cmd[@]}"
   fi
+
   log::info "Done!"
 }
 
