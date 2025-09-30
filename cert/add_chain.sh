@@ -66,35 +66,40 @@ append_chain_to_cert() {
 
 main() {
   local chain_file="${CHAIN_FILE:-./chain}"
-  local opt
+  local cert_file=""
 
-  while getopts ":c:h" opt; do
-    case "$opt" in
-      c)
-        chain_file="$OPTARG"
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -c|--chain)
+        if [[ -z "$2" ]]; then
+          log::error "Option $1 requires an argument."
+          usage 2
+        fi
+        chain_file="$2"
+        shift 2
         ;;
-      h)
+      -h|--help)
         usage 0
         ;;
-      :)
-        log::error "Option -$OPTARG requires an argument."
+      -*)
+        log::error "Invalid option: $1"
         usage 2
         ;;
-      \?)
-        log::error "Invalid option: -$OPTARG"
-        usage 2
+      *)
+        cert_file="$1"
+        shift
+        if [[ $# -gt 0 ]]; then
+          log::warning "Ignoring extra arguments: $*"
+        fi
+        break
         ;;
     esac
   done
 
-  shift $((OPTIND - 1))
-
-  if [[ $# -lt 1 ]]; then
+  if [[ -z "$cert_file" ]]; then
     log::error "No certificate file provided"
     usage 2
   fi
-
-  local cert_file="$1"
 
   if [[ ! -f "$chain_file" ]]; then
     log::error "Chain config file not found: $chain_file"
