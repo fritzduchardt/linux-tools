@@ -46,10 +46,18 @@ append_chain_to_cert() {
   fi
 
   log::info "Appending chain file $chain_file to $out"
-  # Append the full chain to the copied certificate file.
-  if ! lib::exec cat "$chain_file" >>"$out"; then
+  # Append new line
+  if ! lib::exec echo >>"$out"; then
     log::error "Failed to append chain to $out"
     return 5
+  fi
+
+  if ! perms="$(lib::exec stat -c %a "$cert")"; then
+    log::warning "Could not read permissions of $cert, skipping chmod"
+  else
+    if ! lib::exec chmod "$perms" "$out"; then
+      log::warning "Failed to set permissions on $out"
+    fi
   fi
 
   if ! perms="$(lib::exec stat -c %a "$cert")"; then
