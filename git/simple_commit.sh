@@ -107,7 +107,7 @@ main() {
     fi
   fi
 
-  if [[ "$ai" != "yes" ]] && [[ ! "$msg" =~ ^(fix|feat|docs|chore) ]]; then
+  if [[ "$ai" != "yes" ]] && [[ ! "$msg" =~ ^(fix:|feat:|docs:|chore:) ]]; then
     prefix_choices="fix\nfeat\ndocs\nchore"
     prefix="$(echo -e "$prefix_choices" | lib::exec fzf)"
     if [[ -n "$prefix" ]]; then
