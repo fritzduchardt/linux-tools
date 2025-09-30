@@ -33,7 +33,7 @@ log::warn_to_warning() {
 }
 
 main() {
-  local mr="" force="" push="" msg="" ai="" msg_proposal="" prefix_choices="" prefix="" cmd=() main_branch="" current_branch="" all="" opt=""
+  local mr="" force="" push="" msg="" ai="" msg_proposal="" prefix_choices="" prefix="" cmd=() main_branch="" current_branch="" all="" branch_name="" branch_msg=""
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -80,9 +80,24 @@ main() {
         exit 2
       fi
     else
-      log::info "Please enter your commit message.."
+      # Attempt to convert current branch name into a reasonable commit message and prefill the editor.
+      branch_name="$(lib::exec git rev-parse --abbrev-ref HEAD)"
+      # Transform branch name:
+      # - remove remote prefixes and take the last path segment
+      # - strip leading numeric issue ids like "123-" or "123_"
+      # - replace dashes/underscores with spaces
+      branch_msg="$(echo "$branch_name" | lib::exec sed -E 's#^.*/##; s#^[0-9]+[-_]*##; s#[-_]+# #g')"
+      # If branch contains keywords like feat/ or fix/, derive a conventional prefix
+      if echo "$branch_name" | lib::exec grep -qE '(^|/)(feat|feature)/'; then
+        branch_msg="feat: $branch_msg"
+      elif echo "$branch_name" | lib::exec grep -qE '(^|/)(fix|bug|bugfix)/'; then
+        branch_msg="fix: $branch_msg"
+      fi
+
+      log::info "Please enter your commit message.. (prefilled from branch: $branch_name)"
       msg_proposal="$(lib::exec mktemp)"
-      trap "lib::exec rm -f \"$msg_proposal\"" EXIT
+      lib::exec trap "lib::exec rm -f \"$msg_proposal\"" EXIT
+      lib::exec printf "%s\n" "$branch_msg" > "$msg_proposal"
       lib::exec vim "$msg_proposal"
       msg="$(lib::exec cat "$msg_proposal")"
       if [[ -z "$msg" ]]; then
@@ -92,7 +107,7 @@ main() {
     fi
   fi
 
-  if [[ -z "$ai" || "$ai" != "yes" ]]; then
+  if [[ "$ai" != "yes" ]] && [[ ! "$msg" =~ ^(fix|feat|docs|chore) ]]; then
     prefix_choices="fix\nfeat\ndocs\nchore"
     prefix="$(echo -e "$prefix_choices" | lib::exec fzf)"
     if [[ -n "$prefix" ]]; then
