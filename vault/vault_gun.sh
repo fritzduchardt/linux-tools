@@ -28,7 +28,6 @@ traverse_kv() {
 
   log::debug "Traversing path '$path' for secret '$secret_name' key '$secret_key'"
 
-  # attempt to list keys at this path; non-zero listing is tolerated
   local list_json
   list_json="$(lib::exec vault kv list -format=json "$path" 2>/dev/null || true)"
 
@@ -37,7 +36,6 @@ traverse_kv() {
     return 1
   fi
 
-  # iterate keys returned by jq
   local key
   local keys
   keys="$(lib::exec jq -r '.[]' <<< "$list_json" 2>/dev/null || true)"
@@ -51,14 +49,12 @@ traverse_kv() {
       local trimmed_key="${key%/}"
       local next_path="${path%/}/$trimmed_key"
       traverse_kv "$next_path" "$secret_name" "$secret_key"
-      # continue even if found to allow searching entire storage; update RESULT_FOUND accordingly
       continue
     fi
 
     if [[ "$key" == "$secret_name" ]]; then
       log::info "Found secret candidate '$key' at path '$path'"
 
-      # check that the secret exists and capture its JSON; use conditional to avoid set -e exit
       local secret_json
       if secret_json="$(lib::exec vault kv get -format=json "$path/$key" 2>/dev/null || true)"; then
         if [[ -z "$secret_json" ]]; then
@@ -66,18 +62,66 @@ traverse_kv() {
           continue
         fi
 
-        # check whether the requested key exists in the secret data
         if lib::exec jq -e ".data.data | has(\"$secret_key\")" <<< "$secret_json" >/dev/null 2>&1; then
           log::info "Key '$secret_key' exists in secret '$key' at path '$path'"
 
-          # Attempt to remove the key by setting it to an empty string (kv patch accepts key=value).
-          # This clears the value for the named key. Some KV backends may not support true deletion
-          # of a single key; setting to empty is a safe, CLI-compatible operation.
-          if lib::exec vault kv patch "$path/$key" "$secret_key"=""; then
-            log::info "Cleared key '$secret_key' in secret '$key' at path '$path'"
-            RESULT_FOUND=true
+          # Build a new version of the secret where the target key is removed entirely.
+          # We extract the existing data, delete the target key, and then write a new version
+          # containing only the remaining key/value pairs. If no keys remain after deletion,
+          # we remove the secret metadata entirely so that the secret no longer exists.
+          local remaining_entries
+          remaining_entries="$(lib::exec jq -r ".data.data | del(.\"$secret_key\") | to_entries[] | @base64" <<< "$secret_json" 2>/dev/null || true)"
+
+          if [[ -z "$remaining_entries" ]]; then
+            log::info "No remaining keys after removing '$secret_key'; deleting metadata for '$key' at path '$path'"
+            if lib::exec vault kv metadata delete "$path/$key"; then
+              log::info "Deleted metadata and all versions for secret '$key' at path '$path'"
+              RESULT_FOUND=true
+            else
+              log::warn "Failed to delete metadata for secret '$key' at path '$path'"
+            fi
+            continue
+          fi
+
+          local args
+          args=( "vault" "kv" "put" "$path/$key" )
+
+          local entry_b64
+          while IFS= read -r entry_b64; do
+            if [[ -z "$entry_b64" ]]; then
+              continue
+            fi
+
+            local decoded
+            decoded="$(printf "%s" "$entry_b64" | lib::exec base64 -d 2>/dev/null || true)"
+
+            if [[ -z "$decoded" ]]; then
+              log::warn "Failed to decode entry for secret '$key' at path '$path'; skipping entry"
+              continue
+            fi
+
+            local entry_key
+            local entry_value
+            entry_key="$(lib::exec jq -r '.key' <<< "$decoded" 2>/dev/null || true)"
+            entry_value="$(lib::exec jq -r '.value' <<< "$decoded" 2>/dev/null || true)"
+
+            if [[ -z "$entry_key" ]]; then
+              log::warn "Decoded entry missing key for secret '$key' at path '$path'; skipping"
+              continue
+            fi
+
+            args+=( "$entry_key=$entry_value" )
+          done <<< "$remaining_entries"
+
+          if [[ "${#args[@]}" -gt 3 ]]; then
+            if lib::exec "${args[@]}"; then
+              log::info "Wrote new version of secret '$key' at path '$path' with '$secret_key' removed"
+              RESULT_FOUND=true
+            else
+              log::warn "Failed to write new version of secret '$key' at path '$path'"
+            fi
           else
-            log::warn "Failed to clear key '$secret_key' in secret '$key' at path '$path'"
+            log::warn "No valid remaining entries prepared to write for secret '$key' at path '$path'"
           fi
         else
           log::warn "Secret '$key' at path '$path' does not contain key '$secret_key'"
