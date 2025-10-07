@@ -5,130 +5,93 @@ set -eo pipefail
 SCRIPT_DIR="$(dirname -- "$0")"
 source "$SCRIPT_DIR/../lib/log.sh"
 source "$SCRIPT_DIR/../lib/utils.sh"
-source "$SCRIPT_DIR/vault_lib.sh"
 
 usage() {
-  echo "Usage: $0 -s <secret_name> -k <secret_key> [-p <secret_path>]" >&2
-  echo
-  echo "  -s <secret_name>   Name of the secret to remove"
-  echo "  -k <secret_key>    Key of the secret value to remove"
-  echo "  -p <secret_path>   Path to the secret in Vault (default: secret)"
-  echo
-  echo "Examples:"
-  echo "  $0 -s my-secret -k password"
-  echo "  $0 -s my-secret -k username -p secret/data"
+  echo """
+Usage: $0 -s <secret_name> -k <secret_key> [-p <secret_path>]
+
+  -s <secret_name>   Name of the secret to remove
+  -k <secret_key>    Key of the secret value to remove
+  -p <secret_path>   Path to the secret in Vault (default: secret)
+
+Examples:
+  $0 -s my-secret -k password
+  $0 -s my-secret -k username -p secret/data
+"""
   exit 1
 }
 
-traverse_kv_store_for_secret() {
-  local path="$1" secret_name="$2" secret_key="$3"
-
-  log::debug "Traversing path '$path' for secret '$secret_name' key '$secret_key'"
-
-  local list_keys key
-  list_keys="$(vault::list_keys "$path")"
-
-  if [[ -z "$list_keys" ]]; then
-    log::debug "No listable keys at path '$path'"
+process_secret() {
+  local path="$1"
+  local secret_name="$2"
+  local secret_key="$3"
+  
+  local full_path="$path/$secret_name"
+  log::info "Processing secret at '$full_path'"
+  
+  # Get current secret data
+  local secret_json
+  secret_json="$(lib::exec vault kv get -format=json "$full_path" 2>/dev/null)" || return 1
+  
+  # Check if key exists
+  if ! lib::exec jq -e ".data.data | has(\"$secret_key\")" <<< "$secret_json" >/dev/null 2>&1; then
+    log::warn "Key '$secret_key' not found in secret '$full_path'"
     return 1
   fi
-
-  while IFS= read -r key; do
-    if [[ -z "$key" ]]; then
-      continue
-    fi
-
-    if [[ "$key" == */ ]]; then
-      local trimmed_key="${key%/}" next_path="${path%/}/$trimmed_key"
-      traverse_kv_store_for_secret "$next_path" "$secret_name" "$secret_key"
-    elif [[ "$key" == "$secret_name" ]]; then
-      log::info "Found secret candidate '$key' at path '$path'"
-
-      local secret_json
-      secret_json="$(vault::get_json "$path/$key")"
-
-      if [[ -z "$secret_json" ]]; then
-        log::warn "Unable to retrieve secret '$key' at path '$path'"
-        continue
-      fi
-
-      if vault::has_key_in_secret "$secret_json" "$secret_key"; then
-        log::info "Key '$secret_key' exists in secret '$key' at path '$path'"
-
-        local remaining_entries entry_b64 decoded entry_key entry_value
-        remaining_entries="$(vault::remaining_entries_b64 "$secret_json" "$secret_key")"
-
-        if [[ -z "$remaining_entries" ]]; then
-          log::info "No remaining keys after removing '$secret_key'; deleting metadata for '$key' at path '$path'"
-          if vault::delete_metadata "$path/$key"; then
-            log::info "Deleted metadata and all versions for secret '$key' at path '$path'"
-            RESULT_FOUND=true
-          else
-            log::warn "Failed to delete metadata for secret '$key' at path '$path'"
-          fi
-          continue
-        fi
-
-        local args=( "vault" "kv" "put" "$path/$key" )
-
-        while IFS= read -r entry_b64; do
-          if [[ -z "$entry_b64" ]]; then
-            continue
-          fi
-
-          decoded="$(vault::decode_b64_to_json "$entry_b64")"
-
-          if [[ -z "$decoded" ]]; then
-            log::warn "Failed to decode entry for secret '$key' at path '$path'; skipping entry"
-            continue
-          fi
-
-          entry_key="$(lib::exec jq -r '.key' <<< "$decoded" 2>/dev/null || true)"
-          entry_value="$(lib::exec jq -r '.value' <<< "$decoded" 2>/dev/null || true)"
-
-          if [[ -z "$entry_key" ]]; then
-            log::warn "Decoded entry missing key for secret '$key' at path '$path'; skipping"
-            continue
-          fi
-
-          args+=( "$entry_key=$entry_value" )
-        done <<< "$remaining_entries"
-
-        if [[ "${#args[@]}" -gt 3 ]]; then
-          if lib::exec "${args[@]}"; then
-            log::info "Wrote new version of secret '$key' at path '$path' with '$secret_key' removed"
-            RESULT_FOUND=true
-          else
-            log::warn "Failed to write new version of secret '$key' at path '$path'"
-          fi
-        else
-          log::warn "No valid remaining entries prepared to write for secret '$key' at path '$path'"
-        fi
-      else
-        log::warn "Secret '$key' at path '$path' does not contain key '$secret_key'"
-      fi
-    fi
-  done <<< "$list_keys"
+  
+  # Get remaining keys after removal
+  local remaining_data
+  remaining_data="$(lib::exec jq -c ".data.data | del(.\"$secret_key\")" <<< "$secret_json")"
+  
+  if [[ "$remaining_data" == "{}" ]]; then
+    log::info "No keys remaining, deleting secret '$full_path'"
+    lib::exec vault kv metadata delete "$full_path" || true
+    return 0
+  fi
+  
+  # Write back remaining data
+  log::info "Updating secret '$full_path' without key '$secret_key'"
+  lib::exec vault kv put "$full_path" - <<< "$remaining_data" || true
+  return 0
 }
 
-remove_secret_key_from_kv_tree() {
-  local secret_name="$1" secret_key="$2" secret_path="${3:-secret}"
-
-  log::info "Starting removal search for secret name '$secret_name' and key '$secret_key' under path '$secret_path'"
-
-  traverse_kv_store_for_secret "$secret_path" "$secret_name" "$secret_key"
-
-  if [[ "$RESULT_FOUND" == false ]]; then
-    log::error "Secret '$secret_name' with key '$secret_key' not found anywhere under path '$secret_path'"
-    return 1
-  fi
-
-  log::info "Completed search; changes applied where applicable"
+search_and_remove() {
+  local path="$1"
+  local secret_name="$2"
+  local secret_key="$3"
+  local found=false
+  
+  log::debug "Searching in path '$path'"
+  
+  # List all secrets at current path
+  local list_output
+  list_output="$(lib::exec vault kv list -format=json "$path" 2>/dev/null)" || return 0
+  
+  local items
+  items="$(lib::exec jq -r '.[]' <<< "$list_output" 2>/dev/null)" || return 0
+  
+  local item
+  while IFS= read -r item; do
+    [[ -z "$item" ]] && continue
+    
+    if [[ "$item" == */ ]]; then
+      # Directory, recurse
+      local subpath="${path}/${item%/}"
+      search_and_remove "$subpath" "$secret_name" "$secret_key" && found=true
+    elif [[ "$item" == "$secret_name" ]]; then
+      # Found matching secret name
+      process_secret "$path" "$secret_name" "$secret_key" && found=true
+    fi
+  done <<< "$items"
+  
+  [[ "$found" == true ]] && return 0 || return 1
 }
 
 main() {
-  local secret_name="" secret_key="" secret_path=""
-
+  local secret_name=""
+  local secret_key=""
+  local secret_path=""
+  
   while [[ $# -gt 0 ]]; do
     case "$1" in
       -s|--secret-name)
@@ -151,16 +114,21 @@ main() {
         ;;
     esac
   done
-
+  
   secret_path="${secret_path:-secret}"
-
+  
   if [[ -z "$secret_name" ]] || [[ -z "$secret_key" ]]; then
     usage
   fi
-
-  RESULT_FOUND=false
-
-  remove_secret_key_from_kv_tree "$secret_name" "$secret_key" "$secret_path"
+  
+  log::info "Removing key '$secret_key' from secret '$secret_name' under path '$secret_path'"
+  
+  if search_and_remove "$secret_path" "$secret_name" "$secret_key"; then
+    log::info "Successfully processed secret(s)"
+  else
+    log::error "No matching secrets found or unable to process"
+    exit 1
+  fi
 }
 
 main "$@"

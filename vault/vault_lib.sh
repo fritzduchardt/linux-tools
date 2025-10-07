@@ -25,7 +25,8 @@ vault::get_json() {
 }
 
 vault::has_key_in_secret() {
-  local secret_json="$1" key="$2"
+  local secret_json="$1"
+  local key="$2"
   # Check if .data.data has the given key; rely on jq exit code
   if lib::exec jq -e ".data.data | has(\"$key\")" <<< "$secret_json" >/dev/null 2>&1; then
     return 0
@@ -34,7 +35,8 @@ vault::has_key_in_secret() {
 }
 
 vault::remaining_entries_b64() {
-  local secret_json="$1" remove_key="$2"
+  local secret_json="$1"
+  local remove_key="$2"
   # Return base64-encoded entries after deleting a key from the secret's data
   lib::exec jq -r ".data.data | del(.\"$remove_key\") | to_entries[] | @base64" <<< "$secret_json" 2>/dev/null || true
 }
