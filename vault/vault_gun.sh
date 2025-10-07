@@ -34,7 +34,6 @@ remove_key_from_secret() {
 
   log::info "Processing secret at '$path'"
 
-  # Get current secret data
   local secret_json
   secret_json="$(vault::get_json "$path")"
 
@@ -42,15 +41,13 @@ remove_key_from_secret() {
     return 1
   fi
 
-  # Check if key exists
   if ! vault::has_key_in_secret "$secret_json" "$secret_key"; then
     log::warn "Key '$secret_key' not found in secret '$path'"
     return 1
   fi
 
-  # Get remaining keys after removal
   local remaining_data
-  remaining_data="$(lib::exec jq -c ".data.data | del(.\"$secret_key\")" <<< "$secret_json")"
+  remaining_data="$(lib::exec jq -c --arg skey "$secret_key" '.data.data | del(.[$skey])' <<< "$secret_json")"
 
   if [[ "$remaining_data" == "{}" ]]; then
     log::info "No keys remaining, deleting secret '$path'"
@@ -58,7 +55,6 @@ remove_key_from_secret() {
     return 0
   fi
 
-  # Write back remaining data
   log::info "Updating secret '$path' without key '$secret_key'"
   lib::exec vault kv put "$path" - <<< "$remaining_data" || true
   return 0
@@ -71,27 +67,24 @@ add_key_to_secret() {
 
   log::info "Adding key '$secret_key' to secret at '$path'"
 
-  # Get current secret data if it exists
   local secret_json
-  local existing_data="{}"
+  local existing_data
+  existing_data="{}"
 
   secret_json="$(vault::get_json "$path")"
 
   if [[ -n "$secret_json" ]]; then
-    existing_data="$(lib::exec jq -c ".data.data" <<< "$secret_json")"
+    existing_data="$(lib::exec jq -c '.data.data' <<< "$secret_json")"
 
-    # Check if key already exists
-    if lib::exec jq -e "has(\"$secret_key\")" <<< "$existing_data" >/dev/null 2>&1; then
+    if lib::exec jq -e --arg skey "$secret_key" 'has($skey)' <<< "$existing_data" >/dev/null 2>&1; then
       log::error "Key '$secret_key' already exists in secret '$path'"
       return 1
     fi
   fi
 
-  # Add the key
   local updated_data
-  updated_data="$(lib::exec jq -c ". + {\"$secret_key\": \"$value\"}" <<< "$existing_data")"
+  updated_data="$(lib::exec jq -c --arg skey "$secret_key" --arg val "$value" '. + {($skey): $val}' <<< "$existing_data")"
 
-  # Write the updated data
   log::info "Writing key '$secret_key' to secret '$path'"
   lib::exec vault kv put "$path" - <<< "$updated_data" || true
   return 0
@@ -104,7 +97,6 @@ update_key_in_secret() {
 
   log::info "Updating key '$secret_key' in secret at '$path'"
 
-  # Get current secret data
   local secret_json
   secret_json="$(vault::get_json "$path")"
 
@@ -113,20 +105,17 @@ update_key_in_secret() {
     return 1
   fi
 
-  # Check if key exists
   if ! vault::has_key_in_secret "$secret_json" "$secret_key"; then
     log::error "Key '$secret_key' not found in secret '$path'"
     return 1
   fi
 
-  # Get existing data and update the key
   local existing_data
-  existing_data="$(lib::exec jq -c ".data.data" <<< "$secret_json")"
+  existing_data="$(lib::exec jq -c '.data.data' <<< "$secret_json")"
 
   local updated_data
-  updated_data="$(lib::exec jq -c ".\"$secret_key\" = \"$value\"" <<< "$existing_data")"
+  updated_data="$(lib::exec jq -c --arg skey "$secret_key" --arg val "$value" '.[$skey] = $val' <<< "$existing_data")"
 
-  # Write the updated data
   log::info "Updating key '$secret_key' in secret '$path'"
   lib::exec vault kv put "$path" - <<< "$updated_data" || true
   return 0
@@ -142,10 +131,11 @@ search_and_process() {
 
   log::debug "Searching in path '$path'"
 
-  # List all secrets at current path prefix
   local items
-  local base="${path%/*}"
-  local prefix="${path##*/}"
+  local base
+  local prefix
+  base="${path%/*}"
+  prefix="${path##*/}"
   items="$(vault::list_keys "$base" "$prefix")"
 
   if [[ -z "$items" ]]; then
@@ -157,22 +147,16 @@ search_and_process() {
     [[ -z "$item" ]] && continue
 
     if [[ "$item" == */ ]]; then
-      # Directory, recurse
       log::debug "Iterating with $item"
-      search_and_process "$action" "$base/$item" "$secret_name" "$secret_key" \
-        "$value" && found=true
+      search_and_process "$action" "$base/$item" "$secret_name" "$secret_key" "$value" && found=true
     elif [[ "$item" == "$secret_name" ]]; then
       log::debug "Found secret"
-      # Found matching secret name
       if [[ "$action" == "remove" ]]; then
-        remove_key_from_secret "$base/$item" "$secret_key" \
-          && found=true
+        remove_key_from_secret "$base/$item" "$secret_key" && found=true
       elif [[ "$action" == "add" ]]; then
-        add_key_to_secret "$base/$item" "$secret_key" "$value" \
-          && found=true
+        add_key_to_secret "$base/$item" "$secret_key" "$value" && found=true
       elif [[ "$action" == "update" ]]; then
-        update_key_in_secret "$base/$item" "$secret_key" \
-          "$value" && found=true
+        update_key_in_secret "$base/$item" "$secret_key" "$value" && found=true
       fi
     fi
   done <<< "$items"
@@ -180,13 +164,18 @@ search_and_process() {
 }
 
 main() {
-  local action=""
-  local secret_name=""
-  local secret_key=""
-  local secret_path=""
-  local value=""
+  local action
+  local secret_name
+  local secret_key
+  local secret_path
+  local value
 
-  # Check if first argument is the action
+  action=""
+  secret_name=""
+  secret_key=""
+  secret_path=""
+  value=""
+
   if [[ $# -gt 0 ]] && [[ "$1" != -* ]]; then
     action="$1"
     shift
