@@ -1,21 +1,14 @@
 #!/usr/bin/env bash
 
-vault::list_json() {
-  local path="$1"
-  # List keys under a path in Vault KV and return raw JSON (or empty string)
-  lib::exec vault kv list -format=json "$path" 2>/dev/null || true
-}
-
 vault::list_keys() {
-  local path="$1"
-  local list_json
-  list_json="$(vault::list_json "$path")"
-  if [[ -z "$list_json" ]]; then
-    echo ""
+  local base="$1"
+  local prefix="$2"
+  local result="$(lib::exec vault kv list -format=json "$base")"
+  if [[ "$base" != "$prefix" ]]; then
+    echo "$result" | lib::exec jq -r '.[] | select(startswith("'$prefix'"))'
     return 0
   fi
-  # Extract newline-separated keys from JSON array
-  lib::exec jq -r '.[]' <<< "$list_json" 2>/dev/null || true
+  echo "$result" | lib::exec jq -r '.[]'
 }
 
 vault::get_json() {

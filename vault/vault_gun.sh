@@ -5,6 +5,7 @@ set -eo pipefail
 SCRIPT_DIR="$(dirname -- "$0")"
 source "$SCRIPT_DIR/../lib/log.sh"
 source "$SCRIPT_DIR/../lib/utils.sh"
+source "$SCRIPT_DIR/vault_lib.sh"
 
 usage() {
   echo """
@@ -29,19 +30,21 @@ Examples:
 
 remove_key_from_secret() {
   local path="$1"
-  local secret_name="$2"
-  local secret_key="$3"
+  local secret_key="$2"
 
-  local full_path="$path/$secret_name"
-  log::info "Processing secret at '$full_path'"
+  log::info "Processing secret at '$path'"
 
   # Get current secret data
   local secret_json
-  secret_json="$(lib::exec vault kv get -format=json "$full_path" 2>/dev/null)" || return 1
+  secret_json="$(vault::get_json "$path")"
+
+  if [[ -z "$secret_json" ]]; then
+    return 1
+  fi
 
   # Check if key exists
-  if ! lib::exec jq -e ".data.data | has(\"$secret_key\")" <<< "$secret_json" >/dev/null 2>&1; then
-    log::warn "Key '$secret_key' not found in secret '$full_path'"
+  if ! vault::has_key_in_secret "$secret_json" "$secret_key"; then
+    log::warn "Key '$secret_key' not found in secret '$path'"
     return 1
   fi
 
@@ -50,69 +53,69 @@ remove_key_from_secret() {
   remaining_data="$(lib::exec jq -c ".data.data | del(.\"$secret_key\")" <<< "$secret_json")"
 
   if [[ "$remaining_data" == "{}" ]]; then
-    log::info "No keys remaining, deleting secret '$full_path'"
-    lib::exec vault kv metadata delete "$full_path" || true
+    log::info "No keys remaining, deleting secret '$path'"
+    vault::delete_metadata "$path" || true
     return 0
   fi
 
   # Write back remaining data
-  log::info "Updating secret '$full_path' without key '$secret_key'"
-  lib::exec vault kv put "$full_path" - <<< "$remaining_data" || true
+  log::info "Updating secret '$path' without key '$secret_key'"
+  lib::exec vault kv put "$path" - <<< "$remaining_data" || true
   return 0
 }
 
 add_key_to_secret() {
   local path="$1"
-  local secret_name="$2"
-  local secret_key="$3"
-  local value="$4"
+  local secret_key="$2"
+  local value="$3"
 
-  local full_path="$path/$secret_name"
-  log::info "Adding key '$secret_key' to secret at '$full_path'"
+  log::info "Adding key '$secret_key' to secret at '$path'"
 
   # Get current secret data if it exists
   local secret_json
   local existing_data="{}"
 
-  secret_json="$(lib::exec vault kv get -format=json "$full_path" 2>/dev/null)" && {
+  secret_json="$(vault::get_json "$path")"
+
+  if [[ -n "$secret_json" ]]; then
     existing_data="$(lib::exec jq -c ".data.data" <<< "$secret_json")"
-    
+
     # Check if key already exists
     if lib::exec jq -e "has(\"$secret_key\")" <<< "$existing_data" >/dev/null 2>&1; then
-      log::error "Key '$secret_key' already exists in secret '$full_path'"
+      log::error "Key '$secret_key' already exists in secret '$path'"
       return 1
     fi
-  }
+  fi
 
   # Add the key
   local updated_data
   updated_data="$(lib::exec jq -c ". + {\"$secret_key\": \"$value\"}" <<< "$existing_data")"
 
   # Write the updated data
-  log::info "Writing key '$secret_key' to secret '$full_path'"
-  lib::exec vault kv put "$full_path" - <<< "$updated_data" || true
+  log::info "Writing key '$secret_key' to secret '$path'"
+  lib::exec vault kv put "$path" - <<< "$updated_data" || true
   return 0
 }
 
 update_key_in_secret() {
   local path="$1"
-  local secret_name="$2"
-  local secret_key="$3"
-  local value="$4"
+  local secret_key="$2"
+  local value="$3"
 
-  local full_path="$path/$secret_name"
-  log::info "Updating key '$secret_key' in secret at '$full_path'"
+  log::info "Updating key '$secret_key' in secret at '$path'"
 
   # Get current secret data
   local secret_json
-  secret_json="$(lib::exec vault kv get -format=json "$full_path" 2>/dev/null)" || {
-    log::error "Secret '$full_path' does not exist"
+  secret_json="$(vault::get_json "$path")"
+
+  if [[ -z "$secret_json" ]]; then
+    log::error "Secret '$path' does not exist"
     return 1
-  }
+  fi
 
   # Check if key exists
-  if ! lib::exec jq -e ".data.data | has(\"$secret_key\")" <<< "$secret_json" >/dev/null 2>&1; then
-    log::error "Key '$secret_key' not found in secret '$full_path'"
+  if ! vault::has_key_in_secret "$secret_json" "$secret_key"; then
+    log::error "Key '$secret_key' not found in secret '$path'"
     return 1
   fi
 
@@ -124,8 +127,8 @@ update_key_in_secret() {
   updated_data="$(lib::exec jq -c ".\"$secret_key\" = \"$value\"" <<< "$existing_data")"
 
   # Write the updated data
-  log::info "Updating key '$secret_key' in secret '$full_path'"
-  lib::exec vault kv put "$full_path" - <<< "$updated_data" || true
+  log::info "Updating key '$secret_key' in secret '$path'"
+  lib::exec vault kv put "$path" - <<< "$updated_data" || true
   return 0
 }
 
@@ -139,12 +142,15 @@ search_and_process() {
 
   log::debug "Searching in path '$path'"
 
-  # List all secrets at current path
-  local list_output
-  list_output="$(lib::exec vault kv list -format=json "$path" 2>/dev/null)" || return 0
-
+  # List all secrets at current path prefix
   local items
-  items="$(lib::exec jq -r '.[]' <<< "$list_output" 2>/dev/null)" || return 0
+  local base="${path%/*}"
+  local prefix="${path##*/}"
+  items="$(vault::list_keys "$base" "$prefix")"
+
+  if [[ -z "$items" ]]; then
+    return 0
+  fi
 
   local item
   while IFS= read -r item; do
@@ -152,20 +158,24 @@ search_and_process() {
 
     if [[ "$item" == */ ]]; then
       # Directory, recurse
-      local subpath="${path}/${item%/}"
-      search_and_process "$action" "$subpath" "$secret_name" "$secret_key" "$value" && found=true
+      log::debug "Iterating with $item"
+      search_and_process "$action" "$base/$item" "$secret_name" "$secret_key" \
+        "$value" && found=true
     elif [[ "$item" == "$secret_name" ]]; then
+      log::debug "Found secret"
       # Found matching secret name
       if [[ "$action" == "remove" ]]; then
-        remove_key_from_secret "$path" "$secret_name" "$secret_key" && found=true
+        remove_key_from_secret "$base/$item" "$secret_key" \
+          && found=true
       elif [[ "$action" == "add" ]]; then
-        add_key_to_secret "$path" "$secret_name" "$secret_key" "$value" && found=true
+        add_key_to_secret "$base/$item" "$secret_key" "$value" \
+          && found=true
       elif [[ "$action" == "update" ]]; then
-        update_key_in_secret "$path" "$secret_name" "$secret_key" "$value" && found=true
+        update_key_in_secret "$base/$item" "$secret_key" \
+          "$value" && found=true
       fi
     fi
   done <<< "$items"
-
   [[ "$found" == true ]] && return 0 || return 1
 }
 
