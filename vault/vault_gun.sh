@@ -76,9 +76,15 @@ add_key_to_secret() {
 
   secret_json="$(lib::exec vault kv get -format=json "$full_path" 2>/dev/null)" && {
     existing_data="$(lib::exec jq -c ".data.data" <<< "$secret_json")"
+    
+    # Check if key already exists
+    if lib::exec jq -e "has(\"$secret_key\")" <<< "$existing_data" >/dev/null 2>&1; then
+      log::error "Key '$secret_key' already exists in secret '$full_path'"
+      return 1
+    fi
   }
 
-  # Add or update the key
+  # Add the key
   local updated_data
   updated_data="$(lib::exec jq -c ". + {\"$secret_key\": \"$value\"}" <<< "$existing_data")"
 
