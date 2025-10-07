@@ -29,7 +29,7 @@ help() {
 
 log::warn_to_warning() {
   # kept for compatibility if some lib uses log::warn
-  log::warning "$1"
+  log::warn "$1"
 }
 
 main() {
@@ -54,7 +54,7 @@ main() {
 
   if [[ -e ".git/index.lock" ]]; then
     lib::exec rm -f ".git/index.lock" || true
-    log::warning "Removed git lock file"
+    log::warn "Removed git lock file"
   fi
 
   if [[ -z "$(lib::exec git status --porcelain)" ]]; then
