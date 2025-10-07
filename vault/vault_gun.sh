@@ -8,20 +8,21 @@ source "$SCRIPT_DIR/../lib/utils.sh"
 
 usage() {
   echo """
-Usage: $0 -s <secret_name> -k <secret_key> [-p <secret_path>]
+Usage: $0 <action> -s <secret_name> -k <secret_key> [-p <secret_path>]
 
-  -s <secret_name>   Name of the secret to remove
-  -k <secret_key>    Key of the secret value to remove
+  <action>           Action to perform: remove (required)
+  -s <secret_name>   Name of the secret to process
+  -k <secret_key>    Key of the secret value to process
   -p <secret_path>   Path to the secret in Vault (default: secret)
 
 Examples:
-  $0 -s my-secret -k password
-  $0 -s my-secret -k username -p secret/data
+  $0 remove -s my-secret -k password
+  $0 remove -s my-secret -k username -p secret/data
 """
   exit 1
 }
 
-process_secret() {
+remove_key_from_secret() {
   local path="$1"
   local secret_name="$2"
   local secret_key="$3"
@@ -55,10 +56,11 @@ process_secret() {
   return 0
 }
 
-search_and_remove() {
-  local path="$1"
-  local secret_name="$2"
-  local secret_key="$3"
+search_and_process() {
+  local action="$1"
+  local path="$2"
+  local secret_name="$3"
+  local secret_key="$4"
   local found=false
   
   log::debug "Searching in path '$path'"
@@ -77,10 +79,12 @@ search_and_remove() {
     if [[ "$item" == */ ]]; then
       # Directory, recurse
       local subpath="${path}/${item%/}"
-      search_and_remove "$subpath" "$secret_name" "$secret_key" && found=true
+      search_and_process "$action" "$subpath" "$secret_name" "$secret_key" && found=true
     elif [[ "$item" == "$secret_name" ]]; then
       # Found matching secret name
-      process_secret "$path" "$secret_name" "$secret_key" && found=true
+      if [[ "$action" == "remove" ]]; then
+        remove_key_from_secret "$path" "$secret_name" "$secret_key" && found=true
+      fi
     fi
   done <<< "$items"
   
@@ -88,9 +92,16 @@ search_and_remove() {
 }
 
 main() {
+  local action=""
   local secret_name=""
   local secret_key=""
   local secret_path=""
+  
+  # Check if first argument is the action
+  if [[ $# -gt 0 ]] && [[ "$1" != -* ]]; then
+    action="$1"
+    shift
+  fi
   
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -117,13 +128,18 @@ main() {
   
   secret_path="${secret_path:-secret}"
   
-  if [[ -z "$secret_name" ]] || [[ -z "$secret_key" ]]; then
+  if [[ -z "$action" ]] || [[ -z "$secret_name" ]] || [[ -z "$secret_key" ]]; then
     usage
   fi
   
-  log::info "Removing key '$secret_key' from secret '$secret_name' under path '$secret_path'"
+  if [[ "$action" != "remove" ]]; then
+    log::error "Invalid action: '$action'. Only 'remove' is supported."
+    usage
+  fi
   
-  if search_and_remove "$secret_path" "$secret_name" "$secret_key"; then
+  log::info "Action: '$action' - key '$secret_key' from secret '$secret_name' under path '$secret_path'"
+  
+  if search_and_process "$action" "$secret_path" "$secret_name" "$secret_key"; then
     log::info "Successfully processed secret(s)"
   else
     log::error "No matching secrets found or unable to process"
