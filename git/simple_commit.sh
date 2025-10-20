@@ -107,11 +107,16 @@ main() {
     fi
   fi
 
-  if [[ "$ai" != "yes" ]] && [[ ! "$msg" =~ ^(fix:|feat:|docs:|chore:) ]]; then
-    prefix_choices="fix\nfeat\ndocs\nchore"
-    prefix="$(echo -e "$prefix_choices" | lib::exec fzf)"
-    if [[ -n "$prefix" ]]; then
-      msg="$prefix: $msg"
+  if [[ ! "$msg" =~ ^(fix:|feat:|docs:|chore:) ]]; then
+    # if fix is first word in message, use it as semantic commit prefix
+    if [[ "$msg" =~ ^(fix) ]]; then
+      msg="fix:${msg#fix*}"
+    else
+      prefix_choices="fix\nfeat\ndocs\nchore"
+      prefix="$(echo -e "$prefix_choices" | lib::exec fzf)"
+      if [[ -n "$prefix" ]]; then
+        msg="$prefix: $msg"
+      fi
     fi
   fi
 
