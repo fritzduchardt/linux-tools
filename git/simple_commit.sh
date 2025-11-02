@@ -6,34 +6,51 @@ source "$SCRIPT_DIR/../lib/log.sh"
 source "$SCRIPT_DIR/../lib/utils.sh"
 source "$SCRIPT_DIR/git_lib.sh"
 
-help() {
-  echo "Usage: $(basename "$0") [options] [commit message]"
-  echo
-  echo "Commit changes with optional AI-generated commit messages"
-  echo
-  echo "Options:"
-  echo "  -m    Create merge request (yes)"
-  echo "  -M    Don't create merge request (no)"
-  echo "  -f    Force push"
-  echo "  -p    Push after commit"
-  echo "  -a    Stage all files before commit"
-  echo "  -i    Use AI to suggest commit message (only executed when provided)"
-  echo "  -h    Display this help message"
-  echo
-  echo "If no commit message is provided and -i is not passed, you will be prompted to enter one."
-  echo
-  echo "Examples:"
-  echo "  $(basename "$0") -a -p -m \"fix: correct typo in README\""
-  echo "  $(basename "$0") -a -p -i    # use AI to propose a commit message"
+usage() {
+  echo """
+Usage: $0 [options] [commit message]
+
+Commit changes with optional AI-generated commit messages
+
+Options:
+  -m            Create merge request (yes)
+  -M            Don't create merge request (no)
+  -f            Force push
+  -p            Push after commit
+  -a            Stage all files before commit
+  -i            Use AI to suggest commit message (only executed when provided)
+  -t <type>     Semantic commit type to prefix message with (e.g. feat, fix, docs, chore)
+  -h, --help    Display this help message
+
+If no commit message is provided and -i is not passed, you will be prompted to enter one.
+
+Examples:
+  $0 -a -p -m "fix: correct typo in README"
+  $0 -a -p -i    # use AI to propose a commit message
+  $0 -a -p -t feat "add new user onboarding flow"
+"""
 }
 
 log::warn_to_warning() {
-  # kept for compatibility if some lib uses log::warn
   log::warn "$1"
 }
 
 main() {
-  local mr="" force="" push="" msg="" ai="" msg_proposal="" prefix_choices="" prefix="" cmd=() main_branch="" current_branch="" all="" branch_name="" branch_msg=""
+  local mr=""
+  local force=""
+  local push=""
+  local msg=""
+  local ai=""
+  local msg_proposal=""
+  local prefix_choices=""
+  local prefix=""
+  local cmd=()
+  local main_branch=""
+  local current_branch=""
+  local all=""
+  local branch_name=""
+  local branch_msg=""
+  local semantic_type=""
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -43,7 +60,9 @@ main() {
       -p) push="yes"; shift ;;
       -a) all="yes"; shift ;;
       -i) ai="yes"; shift ;;
-      -h|--help) help; exit 0 ;;
+      -t) semantic_type="$2"; shift 2 ;;
+      --type) semantic_type="$2"; shift 2 ;;
+      -h|--help) usage; exit 0 ;;
       --) shift; break ;;
       -*) log::error "Unknown option $1"; exit 1 ;;
       *) break ;;
@@ -71,7 +90,6 @@ main() {
       log::info "Figuring out your commit message.."
       msg_proposal="$(lib::exec mktemp)"
       trap "lib::exec rm -f \"$msg_proposal\"" EXIT
-      # Send staged diff to AI tool to generate a commit message, then allow user to edit it.
       lib::exec git diff --staged | lib::exec "$SCRIPT_DIR/../../ai-tools/fabric/fabric.sh" -p devops_gitcommit > "$msg_proposal" || true
       lib::exec vim "$msg_proposal"
       msg="$(lib::exec cat "$msg_proposal")"
@@ -80,14 +98,8 @@ main() {
         exit 2
       fi
     else
-      # Attempt to convert current branch name into a reasonable commit message and prefill the editor.
       branch_name="$(lib::exec git rev-parse --abbrev-ref HEAD)"
-      # Transform branch name:
-      # - remove remote prefixes and take the last path segment
-      # - strip leading numeric issue ids like "123-" or "123_"
-      # - replace dashes/underscores with spaces
       branch_msg="$(echo "$branch_name" | lib::exec sed -E 's#^.*/##; s#^[0-9]+[-_]*##; s#[-_]+# #g')"
-      # If branch contains keywords like feat/ or fix/, derive a conventional prefix
       if echo "$branch_name" | lib::exec grep -qE '(^|/)(feat|feature)/'; then
         branch_msg="feat: $branch_msg"
       elif echo "$branch_name" | lib::exec grep -qE '(^|/)(fix|bug|bugfix)/'; then
@@ -96,7 +108,7 @@ main() {
 
       log::info "Please enter your commit message.. (prefilled from branch: $branch_name)"
       msg_proposal="$(lib::exec mktemp)"
-      lib::exec trap "lib::exec rm -f \"$msg_proposal\"" EXIT
+      trap "lib::exec rm -f \"$msg_proposal\"" EXIT
       lib::exec printf "%s\n" "$branch_msg" > "$msg_proposal"
       lib::exec vim "$msg_proposal"
       msg="$(lib::exec cat "$msg_proposal")"
@@ -107,15 +119,20 @@ main() {
     fi
   fi
 
-  if [[ ! "$msg" =~ ^(fix:|feat:|docs:|chore:) ]]; then
-    # if fix is first word in message, use it as semantic commit prefix
-    if [[ "$msg" =~ ^(fix) ]]; then
-      msg="fix:${msg#fix*}"
-    else
-      prefix_choices="fix\nfeat\ndocs\nchore"
-      prefix="$(echo -e "$prefix_choices" | lib::exec fzf)"
-      if [[ -n "$prefix" ]]; then
-        msg="$prefix: $msg"
+  if [[ -n "$semantic_type" ]]; then
+    if ! [[ "$msg" =~ ^($semantic_type:|fix:|feat:|docs:|chore:) ]]; then
+      msg="$semantic_type: $msg"
+    fi
+  else
+    if [[ ! "$msg" =~ ^(fix:|feat:|docs:|chore:) ]]; then
+      if [[ "$msg" =~ ^(fix) ]]; then
+        msg="fix:${msg#fix*}"
+      else
+        prefix_choices="fix\nfeat\ndocs\nchore"
+        prefix="$(echo -e "$prefix_choices" | lib::exec fzf)"
+        if [[ -n "$prefix" ]]; then
+          msg="$prefix: $msg"
+        fi
       fi
     fi
   fi
