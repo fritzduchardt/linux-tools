@@ -5,6 +5,7 @@ SCRIPT_DIR="$(dirname -- "$0")"
 source "$SCRIPT_DIR/../lib/log.sh"
 source "$SCRIPT_DIR/../lib/utils.sh"
 source "$SCRIPT_DIR/git_lib.sh"
+FABRIC_SCRIPT="$SCRIPT_DIR/../../../bundesgit/fabric/scripts/fabric.sh"
 
 usage() {
   echo """
@@ -90,7 +91,7 @@ main() {
       log::info "Figuring out your commit message.."
       msg_proposal="$(lib::exec mktemp)"
       trap "lib::exec rm -f \"$msg_proposal\"" EXIT
-      lib::exec git diff --staged | lib::exec "$SCRIPT_DIR/../../ai-tools/fabric/fabric.sh" -p devops_gitcommit > "$msg_proposal" || true
+      lib::exec git diff --staged | lib::exec "$FABRIC_SCRIPT" -p devops_gitcommit > "$msg_proposal" || true
       lib::exec vim "$msg_proposal"
       msg="$(lib::exec cat "$msg_proposal")"
       if [[ -z "$msg" ]]; then
