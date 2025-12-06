@@ -30,6 +30,8 @@ process_pdf() {
   local txt_path="$base.txt"
   local img_path="$base.png"
 
+  trap 'lib::exec rm -f "$img_path"' EXIT
+
   log::info "Processing $pdf_path"
   lib::exec rm -f "$txt_path"
   lib::exec rm -f "$img_path"
@@ -37,6 +39,7 @@ process_pdf() {
   if lib::exec pdftotext -layout "$pdf_path" "$txt_path"; then
     if [[ -s "$txt_path" ]] && grep -q '[[:alnum:]]' "$txt_path"; then
       log::info "Converted $pdf_path to text using pdftotext"
+      trap - EXIT
       return 0
     else
       log::warn "pdftotext produced empty or non-alphanumeric output for $pdf_path"
@@ -51,20 +54,23 @@ process_pdf() {
     log::info "Converted $pdf_path to PNG $img_path"
   else
     log::error "Failed to convert $pdf_path to PNG"
+    trap - EXIT
     return 1
   fi
 
   if lib::exec tesseract "$img_path" "$base" -l eng txt; then
     if [[ -s "$txt_path" ]] && lib::exec grep -q '[[:alnum:]]' "$txt_path"; then
       log::info "Converted $pdf_path to text using tesseract"
+      trap - EXIT
       return 0
     else
-      log::warn "Tesseract produced empty or non-alphanumeric output for
-      $img_path"
+      log::warn "Tesseract produced empty or non-alphanumeric output for $img_path"
+      trap - EXIT
       return 1
     fi
   else
     log::error "Tesseract failed for $img_path"
+    trap - EXIT
     return 1
   fi
 }

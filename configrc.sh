@@ -23,6 +23,9 @@ alias {git-simplecommit-stage-all,scA}="lib::exec_linux_tool $script_dir/git sim
 alias {git-updatebranch,ub}="lib::exec_linux_tool $script_dir/git update_branch.sh"
 alias {git-deletebranch,db}="lib::exec_linux_tool $script_dir/git delete_branch.sh"
 
+# pdf
+alias pdf_to_text="lib::exec_linux_tool $script_dir/pdf pdf_to_text.sh"
+
 # misc
 alias calc="lib::exec_linux_tool $script_dir/misc calc.sh"
 alias tax="lib::exec_linux_tool $script_dir/misc tax.sh calc"
