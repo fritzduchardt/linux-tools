@@ -6,8 +6,6 @@ SCRIPT_DIR="$(dirname -- "$0")"
 source "$SCRIPT_DIR/../lib/log.sh"
 source "$SCRIPT_DIR/../lib/utils.sh"
 
-MD_FILE=""
-
 usage() {
     echo """Usage: $0 [OPTIONS] <markdown_file>
 
@@ -24,69 +22,92 @@ Examples:
 """
 }
 
+collect_images_by_extension() {
+    local md_dir="$1"
+    lib::exec find "$md_dir" -maxdepth 1 -type f -regex "*.\.(png|jpg|jpeg)" -printf '%T@ %p\n' | sort -n | cut -d' ' -f2-
+}
+
+collect_markdown_basenames() {
+    local md_dir="$1"
+    lib::exec find "$md_dir" -maxdepth 1 -type f -iname "*.md" -print0
+}
+
+is_image_associated_with_markdown() {
+    local img_basename="$1"
+    local md_basenames_str="$2"
+
+    if [[ " $md_basenames_str " =~ " $img_basename " ]]; then
+        return 0
+    fi
+
+    return 1
+}
+
 main() {
     local md_file="$1"
-    if [[ ! -f "$md_file" ]]; then
-        log::error "File '$md_file' does not exist or is not a file."
-        exit 1
-    fi
-    local md_dir="$(dirname "$md_file")"
-    local md_basename="$(basename "$md_file" .md)"
-    local image_exts="jpg jpeg png"
-    local images=()
-    for ext in $image_exts; do
-        while IFS= read -r -d '' file; do
-            images+=("$file")
-        done < <(lib::exec find "$md_dir" -maxdepth 1 -type f -iname "*.${ext}" -print0)
-    done
-    local sorted_images=()
-    while IFS= read -r line; do
-        sorted_images+=("$line")
-    done < <(for img in "${images[@]}"; do
-        mtime=$(lib::exec stat -c '%Y' "$img")
-        echo "$mtime $img"
-    done | lib::exec sort -n | cut -d' ' -f2- )
-    local md_basenames=()
-    while IFS= read -r -d '' file; do
-        md_basenames+=("$(basename "$file" .md)")
-    done < <(lib::exec find "$md_dir" -maxdepth 1 -type f -iname "*.md" -print0)
+    local md_dir
+    md_dir="$(dirname "$md_file")"
+    local md_basename
+    md_basename="$(basename "$md_file" .md)"
+
+    local images_str
+    images_str="$(collect_images_by_extension "$md_dir")"
+
+    local md_basenames_str
+    md_basenames_str="$(collect_markdown_basenames "$md_dir")"
+
     local count=1
-    for img in "${sorted_images[@]}"; do
-        local img_basename="$(basename "$img")"
+
+    while IFS= read -r img; do
+        [[ -z "$img" ]] && continue
+
+        local img_basename
+        img_basename="$(basename "$img")"
         img_basename="${img_basename%.*}"
-        if [[ ! " ${md_basenames[*]} " =~ " ${img_basename} " ]]; then
-            local ext="${img##*.}"
-            local new_name="${md_basename}_${count}.${ext}"
+
+        if ! is_image_associated_with_markdown "$img_basename" "$md_basenames_str"; then
+            local ext
+            ext="${img##*.}"
+            local new_name
+            new_name="${md_basename}_${count}.${ext}"
+
             log::info "Renaming '$img' to '$new_name'"
             lib::exec mv "$img" "$md_dir/$new_name"
             ((count++))
         fi
-    done
+    done <<< "$images_str"
 }
 
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        -h|--help)
-            usage
-            exit 0
-            ;;
-        *)
-            if [[ -z "$MD_FILE" ]]; then
-                MD_FILE="$1"
-            else
-                log::error "Unexpected argument: $1"
+parse_arguments() {
+    local md_file=""
+
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -h|--help)
                 usage
-                exit 1
-            fi
-            shift
-            ;;
-    esac
-done
+                exit 0
+                ;;
+            *)
+                if [[ -z "$md_file" ]]; then
+                    md_file="$1"
+                else
+                    log::error "Unexpected argument: $1"
+                    usage
+                    exit 1
+                fi
+                shift
+                ;;
+        esac
+    done
 
-if [[ -z "$MD_FILE" ]]; then
-    log::error "Markdown file not provided."
-    usage
-    exit 1
-fi
+    if [[ -z "$md_file" ]]; then
+        log::error "Markdown file not provided."
+        usage
+        exit 1
+    fi
 
+    echo "$md_file"
+}
+
+MD_FILE=$(parse_arguments "$@")
 main "$MD_FILE"
