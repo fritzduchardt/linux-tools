@@ -56,7 +56,8 @@ process_one_jpeg() {
   out="$dir/$name.resized.jpg"
 
   log::info "Optimizing JPEG to about $JPEGOPTIM_PERCENT%: $file"
-  lib::exec jpegoptim --quiet --strip-all --size="$JPEGOPTIM_PERCENT%" "$file" || true
+  lib::exec jpegoptim --quiet --preserve --size="$JPEGOPTIM_PERCENT%" "$file" \
+    || true
 
   log::info "Resizing JPEG dimensions to $CONVERT_PERCENT%: $file -> $out"
   lib::exec convert "$file" -resize "$CONVERT_PERCENT%" "$out"
