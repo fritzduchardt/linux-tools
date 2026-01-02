@@ -28,7 +28,7 @@ collect_images_by_extension() {
   local md_dir="$1"
   lib::exec find "$md_dir" -maxdepth 1 -type f -iname "*.jpg" \
     -printf '%T@ %p\n' \
-    | sort -n \
+    | sort -nr \
     | cut -d' ' -f2-
 }
 
@@ -71,7 +71,7 @@ main() {
     log::debug "Processing image: $img"
     local img_basename
     img_basename="$(basename "$img")"
-    img_basename="${img_basename%.*}"
+    img_basename="${img_basename%_*}"
 
     if ! is_image_associated_with_markdown "$img_basename" \
       "$md_basenames_str"; then
