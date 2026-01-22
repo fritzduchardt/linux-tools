@@ -52,6 +52,11 @@ is_image_associated_with_markdown() {
 main() {
   local md_file="$1"
   local md_dir
+
+  # remove spaces if need be
+  lib::exec mv "$md_file" "${md_file// /-}"
+  md_file="${md_file// /-}"
+
   md_dir="$(dirname "$md_file")"
   local md_basename
   md_basename="$(basename "$md_file" .md)"
